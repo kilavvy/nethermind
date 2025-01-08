@@ -67,7 +67,7 @@ namespace Nethermind.Evm.Precompiles
                 UInt256 iterationCount = CalculateIterationCount(expLength, exp);
                 bool overflow = UInt256.MultiplyOverflow(complexity, iterationCount, out UInt256 result);
                 result /= 3;
-                return result > long.MaxValue || overflow ? long.MaxValue : Math.Max(500L, (long)result);
+                return result > long.MaxValue || overflow ? long.MaxValue : Math.Max(200L, (long)result);
             }
             catch (OverflowException)
             {
@@ -178,7 +178,7 @@ namespace Nethermind.Evm.Precompiles
             UInt256 maxLength = UInt256.Max(baseLength, modulusLength);
             UInt256.Mod(maxLength, 8, out UInt256 mod8);
             UInt256 words = (maxLength / 8) + ((mod8.IsZero) ? UInt256.Zero : UInt256.One);
-            return maxLength > 32 ? 2 * words * words : words * words;
+            return words * words;
         }
 
         /// <summary>
@@ -209,7 +209,7 @@ namespace Nethermind.Evm.Precompiles
                         bitLength--;
                     }
 
-                    bool overflow = UInt256.MultiplyOverflow((exponentLength - 32), 16, out UInt256 multiplicationResult);
+                    bool overflow = UInt256.MultiplyOverflow((exponentLength - 32), 8, out UInt256 multiplicationResult);
                     overflow |= UInt256.AddOverflow(multiplicationResult, (UInt256)bitLength, out iterationCount);
                     if (overflow)
                     {
