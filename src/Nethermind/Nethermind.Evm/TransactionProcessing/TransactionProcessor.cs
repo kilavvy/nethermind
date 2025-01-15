@@ -767,7 +767,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 long actualRefund = RefundHelper.CalculateClaimableRefund(spentGas, totalToRefund, spec);
 
                 if (Logger.IsTrace)
-                    Logger.Trace("Refunding NEW unused gas of " + unspentGas + " and refund of " + actualRefund);
+                    Logger.Trace("Refunding NEW unused gas of " + unspentGas + " and refund of " + actualRefund + " floor gas " + floorGas + " spent gas " + spentGas);
                 spentGas -= actualRefund;
             }
             else if (codeInsertRefund > 0)
