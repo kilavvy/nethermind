@@ -35,7 +35,7 @@ public class BlockHashInStateHandler : IBlockHashInStateHandler
 
         StorageCell blockHashStoreCell = new(eip2935Account, blockIndex);
         // TODO: this check is mostly removed for stateless nodes
-        // if (!stateProvider.AccountExists(eip2935Account)) stateProvider.CreateAccount(eip2935Account, 0, 1);
+        if (!stateProvider.AccountExists(eip2935Account)) stateProvider.CreateAccount(eip2935Account, 0, 0);
         // if (blockHeader.Number == 1) stateProvider.CreateAccount(eip2935Account, 0);
         stateProvider.Set(blockHashStoreCell, parentBlockHash.Bytes.WithoutLeadingZeros().ToArray());
 
