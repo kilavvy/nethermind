@@ -14,6 +14,7 @@ using Nethermind.Consensus.Processing;
 using Nethermind.Consensus.Validators;
 using Nethermind.Core;
 using Nethermind.Core.Extensions;
+using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.Serialization.Rlp;
 
@@ -174,6 +175,7 @@ namespace Nethermind.Hive
                 Block block = blocks[i];
                 if (_logger.IsInfo)
                     _logger.Info($"HIVE Processing a chain.rlp block {block.ToString(Block.Format.Short)}");
+                block.Header.TotalDifficulty = UInt256.Zero;
                 await ProcessBlock(block);
             }
         }
