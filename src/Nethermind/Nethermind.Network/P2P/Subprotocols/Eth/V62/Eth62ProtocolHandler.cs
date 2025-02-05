@@ -11,6 +11,7 @@ using Nethermind.Core;
 using Nethermind.Core.Caching;
 using Nethermind.Core.Collections;
 using Nethermind.Core.Crypto;
+using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.Network.Contract.P2P;
 using Nethermind.Network.P2P.EventArg;
@@ -91,7 +92,7 @@ namespace Nethermind.Network.P2P.Subprotocols.Eth.V62
             {
                 NetworkId = SyncServer.NetworkId,
                 ProtocolVersion = ProtocolVersion,
-                TotalDifficulty = head.TotalDifficulty ?? head.Difficulty,
+                TotalDifficulty = UInt256.Zero,
                 BestHash = head.Hash!,
                 GenesisHash = SyncServer.Genesis.Hash!
             };
