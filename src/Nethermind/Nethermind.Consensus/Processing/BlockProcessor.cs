@@ -70,7 +70,7 @@ public partial class BlockProcessor(
     /// We use a single receipt tracer for all blocks. Internally receipt tracer forwards most of the calls
     /// to any block-specific tracers.
     /// </summary>
-    protected BlockReceiptsTracer ReceiptsTracer { get; set; } = new();
+    protected BlockExecutionTracer ExecutionTracer { get; set; } = new(true, true);
 
     public event EventHandler<BlockProcessedEventArgs>? BlockProcessed;
 
@@ -318,14 +318,14 @@ public partial class BlockProcessor(
         BlockHeader header = block.Header;
         IReleaseSpec spec = _specProvider.GetSpec(header);
 
-        ReceiptsTracer.SetOtherTracer(blockTracer);
-        ReceiptsTracer.StartNewBlockTrace(block);
+        ExecutionTracer.SetOtherTracer(blockTracer);
+        ExecutionTracer.StartNewBlockTrace(block);
 
         StoreBeaconRoot(block, spec);
         _blockhashStore.ApplyBlockhashStateChanges(header);
         _stateProvider.Commit(spec, commitRoots: false);
 
-        TxReceipt[] receipts = _blockTransactionsExecutor.ProcessTransactions(block, options, ReceiptsTracer, spec);
+        TxReceipt[] receipts = _blockTransactionsExecutor.ProcessTransactions(block, options, ExecutionTracer, spec);
         CalculateBlooms(receipts);
 
         if (spec.IsEip4844Enabled)
@@ -335,7 +335,7 @@ public partial class BlockProcessor(
 
         header.ReceiptsRoot = _receiptsRootCalculator.GetReceiptsRoot(receipts, spec, block.ReceiptsRoot);
         ApplyMinerRewards(block, blockTracer, spec);
-        _withdrawalProcessor.ProcessWithdrawals(block, spec);
+        _withdrawalProcessor.ProcessWithdrawals(block, spec, blockTracer);
 
         // We need to do a commit here as in _executionRequestsProcessor while executing system transactions
         // we do WorldState.Commit(SystemTransactionReleaseSpec.Instance). In SystemTransactionReleaseSpec
@@ -344,7 +344,7 @@ public partial class BlockProcessor(
 
         _executionRequestsProcessor.ProcessExecutionRequests(block, _stateProvider, receipts, spec);
 
-        ReceiptsTracer.EndBlockTrace();
+        ExecutionTracer.EndBlockTrace();
 
         _stateProvider.Commit(spec, commitRoots: true);
 
