@@ -283,6 +283,15 @@ public partial class BlockProcessor : IBlockProcessor
 
     protected virtual (IBlockProcessor.IBlockTransactionsExecutor, IWorldState) GetOrCreateExecutorAndState(Block block)
     {
+        IReleaseSpec? currentSpec = _specProvider.GetSpec(block.Header);
+        if (currentSpec.IsVerkleTreeEipEnabled)
+        {
+            // check if it is the transition block
+            // then return transition provider
+            // else return verkle provider
+            var ss = _stateProvider as VergeWorldStateProvider;
+            ss!.StartBlockProcessing(block.Header);
+        }
         return (_blockTransactionsExecutor, _stateProvider);
     }
 

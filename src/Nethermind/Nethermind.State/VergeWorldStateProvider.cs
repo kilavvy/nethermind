@@ -7,39 +7,42 @@ using System.Diagnostics.CodeAnalysis;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Specs;
+using Nethermind.Db;
 using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.State.Tracing;
+using Nethermind.State.Transition;
 using Nethermind.Trie;
+using Nethermind.Trie.Pruning;
+using Nethermind.Verkle.Tree.TreeStore;
 
 namespace Nethermind.State;
 
-public class VergeWorldStateProvider: IWorldState
+public class VergeWorldStateProvider(
+    ITrieStore merkleStateStore,
+    IVerkleTreeStore verkleStateStore,
+    StateReader merkleStateReader,
+    ISpecProvider specProvider,
+    IDbProvider dbProvider,
+    ILogManager logManager)
+    : IWorldState
 {
-    private IWorldState _merkleState;
-    private IWorldState _verkleState;
-    private IWorldState _transitionWorldState;
-    private IWorldState? _worldStateToUse;
-    private ILogManager _logManager;
-    private ISpecProvider _specProvider;
+    private IWorldState? _transitionWorldState = null;
+    private IWorldState? _worldStateToUse = null;
 
-    public VergeWorldStateProvider(IWorldState merkleState, IWorldState verkleState, IWorldState transitionWorldState, ISpecProvider specProvider, ILogManager logManager)
-    {
-        _merkleState = merkleState;
-        _verkleState = verkleState;
-        _transitionWorldState = transitionWorldState;
-        _logManager = logManager;
-        _specProvider = specProvider;
-    }
+    private VerkleWorldState _verkleState = new VerkleWorldState(verkleStateStore, dbProvider.CodeDb, logManager);
+    private WorldState _merkleState = new WorldState(merkleStateStore, dbProvider.CodeDb, logManager);
 
     public bool StartBlockProcessing(BlockHeader header)
     {
-        IReleaseSpec currentSpec = _specProvider.GetSpec(header);
+        IReleaseSpec currentSpec = specProvider.GetSpec(header);
         header.MaybeParent!.TryGetTarget(out BlockHeader parent);
-        IReleaseSpec parentSpec = _specProvider.GetSpec(parent!);
+        IReleaseSpec parentSpec = specProvider.GetSpec(parent!);
         bool isTransitionBlock = currentSpec.IsVerkleTreeEipEnabled && !parentSpec.IsVerkleTreeEipEnabled;
         if (isTransitionBlock)
         {
+            _transitionWorldState ??= new TransitionWorldState(merkleStateReader, _merkleState.StateRoot,
+                new VerkleStateTree(verkleStateStore, logManager), dbProvider.CodeDb, dbProvider.Preimages, logManager);
             _worldStateToUse = _transitionWorldState;
         }
         else if (currentSpec.IsVerkleTreeEipEnabled)
@@ -50,11 +53,14 @@ public class VergeWorldStateProvider: IWorldState
         {
             _worldStateToUse = _merkleState;
         }
+
+        if (currentStateRoot != Keccak.EmptyTreeHash) _worldStateToUse.StateRoot = currentStateRoot;
         return true;
     }
 
     public void ResetProvider()
     {
+        currentStateRoot = _worldStateToUse?.StateRoot ?? Keccak.EmptyTreeHash;
         _worldStateToUse = null;
     }
 
@@ -135,17 +141,19 @@ public class VergeWorldStateProvider: IWorldState
         _worldStateToUse.RecalculateStateRoot();
     }
 
+    private Hash256 currentStateRoot = Keccak.EmptyTreeHash;
+
     public Hash256 StateRoot
     {
         get
         {
-            if (_worldStateToUse is null) ProviderNotInitialized();
+            if (_worldStateToUse is null) return currentStateRoot;
             return _worldStateToUse.StateRoot;
         }
         set
         {
-            if (_worldStateToUse is null) ProviderNotInitialized();
-            _worldStateToUse.StateRoot = value;
+            if (_worldStateToUse is null) currentStateRoot = value;
+            else _worldStateToUse.StateRoot = value;
         }
     }
 
