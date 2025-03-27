@@ -74,6 +74,12 @@ namespace Nethermind.State
         {
             return _persistentStorageProvider.GetOriginal(storageCell);
         }
+
+        public bool ValuePresentInTree(Hash256 key)
+        {
+            throw new NotImplementedException();
+        }
+
         public ReadOnlySpan<byte> Get(in StorageCell storageCell)
         {
             return _persistentStorageProvider.Get(storageCell);

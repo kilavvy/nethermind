@@ -33,12 +33,34 @@ public class VergeWorldStateProvider(
     private VerkleWorldState _verkleState = new VerkleWorldState(verkleStateStore, dbProvider.CodeDb, logManager);
     private WorldState _merkleState = new WorldState(merkleStateStore, dbProvider.CodeDb, logManager);
 
+    public bool StartGenesisBlockProcessing()
+    {
+        IReleaseSpec? genesisSpec = specProvider.GenesisSpec;
+
+        if (genesisSpec.IsVerkleTreeEipEnabled)
+        {
+            _worldStateToUse = _verkleState;
+        }
+        else
+        {
+            _worldStateToUse = _merkleState;
+        }
+
+        if (currentStateRoot != Keccak.EmptyTreeHash) _worldStateToUse.StateRoot = currentStateRoot;
+        return true;
+    }
+
     public bool StartBlockProcessing(BlockHeader header)
     {
         IReleaseSpec currentSpec = specProvider.GetSpec(header);
-        header.MaybeParent!.TryGetTarget(out BlockHeader parent);
-        IReleaseSpec parentSpec = specProvider.GetSpec(parent!);
-        bool isTransitionBlock = currentSpec.IsVerkleTreeEipEnabled && !parentSpec.IsVerkleTreeEipEnabled;
+        bool isTransitionBlock = false;
+        if (header.Number != 0)
+        {
+            header.MaybeParent!.TryGetTarget(out BlockHeader parent);
+            IReleaseSpec parentSpec = specProvider.GetSpec(parent!);
+            isTransitionBlock = currentSpec.IsVerkleTreeEipEnabled && !parentSpec.IsVerkleTreeEipEnabled;
+        }
+
         if (isTransitionBlock)
         {
             _transitionWorldState ??= new TransitionWorldState(merkleStateReader, _merkleState.StateRoot,
@@ -91,6 +113,12 @@ public class VergeWorldStateProvider(
     {
         if (_worldStateToUse is null) ProviderNotInitialized();
         return _worldStateToUse.GetOriginal(in storageCell);
+    }
+
+    public bool ValuePresentInTree(Hash256 key)
+    {
+        if (_worldStateToUse is null) ProviderNotInitialized();
+        return _worldStateToUse.ValuePresentInTree(key);
     }
 
     public ReadOnlySpan<byte> Get(in StorageCell storageCell)
