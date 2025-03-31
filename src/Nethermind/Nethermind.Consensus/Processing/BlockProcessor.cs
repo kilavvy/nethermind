@@ -339,6 +339,7 @@ public partial class BlockProcessor : IBlockProcessor
         _withdrawalProcessor.ProcessWithdrawals(block, ExecutionTracer, spec, worldState);
         ExecutionTracer.EndBlockTrace();
 
+        worldState.SweepLeaves((int)block.Number);
         // generate and add execution witness to the block
         bool isProducingBlocks = options.ContainsFlag(ProcessingOptions.ProducingBlock);
         if (!block.IsGenesis && spec.IsVerkleTreeEipEnabled && (isProducingBlocks || ShouldGenerateWitness))
@@ -380,6 +381,7 @@ public partial class BlockProcessor : IBlockProcessor
             worldState.Commit(spec);
         }
 
+        worldState.CommitTree(block.Number);
         if (ShouldComputeStateRoot(block.Header))
         {
             worldState.RecalculateStateRoot();

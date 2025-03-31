@@ -49,7 +49,7 @@ public class TransitionWorldState(
         verkleTree,
         codeDb, logManager), TransitionQueryVisitor.IValueCollector
 {
-    private const int NumberOfLeavesToMove = 5000;
+    private const int NumberOfLeavesToMove = 7;
     private Hash256 FinalizedMerkleStateRoot { get; } = finalizedStateRoot;
 
     // TODO: not needed right now
@@ -89,13 +89,15 @@ public class TransitionWorldState(
         return base.GetCodeChunk(codeOwner, chunkId);
     }
 
-    public void SweepLeaves(int blockNumber)
+    public override void SweepLeaves(int blockNumber)
     {
         var options = new VisitingOptions { ExpectAccounts = true };
-        var visitor = new TransitionQueryVisitor(_startAccountHash, _startStorageHash, this, blockNumber);
+        var visitor = new TransitionQueryVisitor(_startAccountHash, _startStorageHash, this, nodeLimit: NumberOfLeavesToMove);
         merkleStateReader.RunTreeVisitor(visitor, FinalizedMerkleStateRoot, options);
         _startAccountHash = visitor.CurrentAccountPath.Path;
         _startStorageHash = visitor.CurrentStoragePath.Path;
+        // Console.WriteLine($"SweepLeaves {visitor.CurrentAccountPath.Path} {visitor.CurrentStoragePath.Path}");
+        Tree.Commit();
     }
 
     // TODO: does not work
@@ -153,20 +155,33 @@ public class TransitionWorldState(
 
     public void CollectAccount(in ValueHash256 path, CappedArray<byte> value)
     {
-        Console.WriteLine($"CollectAccount {path} {value.ToArray().ToHexString()}");
+        // Console.WriteLine($"CollectAccount {path} {value.ToArray().ToHexString()}");
         var addressBytes = preImageDb.Get(path.BytesAsSpan);
         if (addressBytes is null) throw new ArgumentException("PreImage not found");
         var address = new Address(addressBytes);
+        // Console.WriteLine($"Address {address}");
         SetState(address, AccountDecoder.Instance.Decode(value), true);
     }
 
     public void CollectStorage(in ValueHash256 account, in ValueHash256 path, CappedArray<byte> value)
     {
-        Console.WriteLine($"CollectStorage {account} {path} {value.ToArray().ToHexString()}");
+
         var addressBytes = preImageDb.Get(account.BytesAsSpan);
         if (addressBytes is null) throw new ArgumentException("PreImage not found");
         var address = new Address(addressBytes);
+        // Console.WriteLine($"CollectStorage {account} {path} {value.ToArray().ToHexString()} {address}");
         var index = preImageDb.Get(path.BytesAsSpan);
         Set(new StorageCell(address, new UInt256(index, true)), value.ToArray());
+    }
+
+    public int CollectCode(in ValueHash256 path, Hash256 codeHash)
+    {
+        // Console.WriteLine($"CollectCode {path} {codeHash}");
+        var addressBytes = preImageDb.Get(path.BytesAsSpan);
+        if (addressBytes is null) throw new ArgumentException("PreImage not found");
+        var address = new Address(addressBytes);
+        var code = CodeDb[codeHash.Bytes];
+        Tree.SetCode(address, code);
+        return (int)Math.Ceiling((double)code.Length / 31);
     }
 }

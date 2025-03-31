@@ -53,23 +53,30 @@ public class VergeWorldStateProvider(
     public bool StartBlockProcessing(BlockHeader header)
     {
         IReleaseSpec currentSpec = specProvider.GetSpec(header);
-        bool isTransitionBlock = false;
-        if (header.Number != 0)
-        {
-            header.MaybeParent!.TryGetTarget(out BlockHeader parent);
-            IReleaseSpec parentSpec = specProvider.GetSpec(parent!);
-            isTransitionBlock = currentSpec.IsVerkleTreeEipEnabled && !parentSpec.IsVerkleTreeEipEnabled;
-        }
-
-        if (isTransitionBlock)
+        // bool isTransitionBlock = false;
+        // if (header.Number != 0)
+        // {
+        //     header.MaybeParent!.TryGetTarget(out BlockHeader parent);
+        //     IReleaseSpec parentSpec = specProvider.GetSpec(parent!);
+        //     isTransitionBlock = currentSpec.IsVerkleTreeEipEnabled && !parentSpec.IsVerkleTreeEipEnabled;
+        // }
+        //
+        // if (isTransitionBlock)
+        // {
+        //     _transitionWorldState ??= new TransitionWorldState(merkleStateReader, _merkleState.StateRoot,
+        //         new VerkleStateTree(verkleStateStore, logManager), dbProvider.CodeDb, dbProvider.CodeDb, logManager);
+        //     _worldStateToUse = _transitionWorldState;
+        // }
+        // else
+        // if (currentSpec.IsVerkleTreeEipEnabled)
+        // {
+        //     _worldStateToUse = _verkleState;
+        // }
+        if (currentSpec.IsVerkleTreeEipEnabled)
         {
             _transitionWorldState ??= new TransitionWorldState(merkleStateReader, _merkleState.StateRoot,
-                new VerkleStateTree(verkleStateStore, logManager), dbProvider.CodeDb, dbProvider.Preimages, logManager);
+                new VerkleStateTree(verkleStateStore, logManager), dbProvider.CodeDb, dbProvider.CodeDb, logManager);
             _worldStateToUse = _transitionWorldState;
-        }
-        else if (currentSpec.IsVerkleTreeEipEnabled)
-        {
-            _worldStateToUse = _verkleState;
         }
         else
         {
@@ -113,6 +120,12 @@ public class VergeWorldStateProvider(
     {
         if (_worldStateToUse is null) ProviderNotInitialized();
         return _worldStateToUse.GetOriginal(in storageCell);
+    }
+
+    public void SweepLeaves(int blockNumber)
+    {
+        if (_worldStateToUse is null) ProviderNotInitialized();
+        _worldStateToUse.SweepLeaves(blockNumber);
     }
 
     public bool ValuePresentInTree(Hash256 key)
