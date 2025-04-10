@@ -338,6 +338,7 @@ public partial class BlockProcessor : IBlockProcessor
         ApplyMinerRewards(block, blockTracer, spec);
         _withdrawalProcessor.ProcessWithdrawals(block, ExecutionTracer, spec, worldState);
         ExecutionTracer.EndBlockTrace();
+        worldState.Commit(spec);
 
         worldState.SweepLeaves((int)block.Number);
         // generate and add execution witness to the block
@@ -381,6 +382,7 @@ public partial class BlockProcessor : IBlockProcessor
             worldState.Commit(spec);
         }
 
+        Console.WriteLine($"THIS IS THE END OF BLOCK CHANGES");
         worldState.CommitTree(block.Number);
         if (ShouldComputeStateRoot(block.Header))
         {

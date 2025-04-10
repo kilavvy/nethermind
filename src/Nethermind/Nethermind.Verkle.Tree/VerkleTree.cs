@@ -152,10 +152,10 @@ public partial class VerkleTree(IVerkleTreeStore verkleStateStore, ILogManager l
 
     public void CommitTree(long blockNumber)
     {
-        // foreach (var VARIABLE in TreeCache.LeafTable)
-        // {
-        //     Console.WriteLine($"CommitTree: {VARIABLE.Key.ToHexString()} {VARIABLE.Value.ToHexString()}");
-        // }
+        foreach (var VARIABLE in TreeCache.LeafTable)
+        {
+            Console.WriteLine($"CommitTree: {VARIABLE.Key.ToHexString()} {VARIABLE.Value.ToHexString()}");
+        }
         VerkleStateStore.InsertBatch(blockNumber, TreeCache);
         Reset();
     }
