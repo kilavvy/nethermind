@@ -26,6 +26,7 @@ namespace Nethermind.Evm
         public const long SSet = 20000;
         public const long SReset = 5000;
         public const long Create = 32000;
+        public const long CreateEip4762 = 1000;
         public const long CodeDeposit = 200;
         public const long Call = 40;
         public const long CallEip150 = 700;

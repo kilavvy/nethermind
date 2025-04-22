@@ -406,7 +406,7 @@ internal static partial class EvmInstructions
         Address address = stack.PopAddress();
         if (address is null) goto StackUnderflow;
         // Check if enough gas for account access and charge accordingly.
-        if (!ChargeAccountAccessGas(ref gasAvailable, vm, address)) goto OutOfGas;
+        if (!ChargeAccountAccessGas(ref gasAvailable, vm, address, opCode: Instruction.EXTCODEHASH)) goto OutOfGas;
 
         IWorldState state = vm.WorldState;
         // For dead accounts, the specification requires pushing zero.
@@ -611,6 +611,7 @@ internal static partial class EvmInstructions
         long number = a > long.MaxValue ? long.MaxValue : (long)a.u0;
 
         // Retrieve the block hash for the given block number.
+        // TODO: figure out how to get witness here for state access when eip2935 enabled
         Hash256? blockHash = vm.BlockHashProvider.GetBlockhash(vm.EvmState.Env.TxExecutionContext.BlockExecutionContext.Header, number);
 
         // Push the block hash bytes if available; otherwise, push a 32-byte zero value.

@@ -30,8 +30,6 @@ public interface IWorldStateManager: IStoreWithReorgBoundary
     /// <returns></returns>
     IWorldState CreateWorldStateForWarmingUp(IWorldState forWarmup);
 
-    event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached;
-
     // TODO: These two method can be combined
     IOverridableWorldScope CreateOverridableWorldScope();
     IWorldState CreateOverlayWorldState(IKeyValueStoreWithBatching overlayState, IKeyValueStoreWithBatching overlayCode);
