@@ -75,7 +75,7 @@ namespace Nethermind.Consensus.Processing
             }
 
             public virtual TxReceipt[] ProcessTransactions(Block block, ProcessingOptions processingOptions,
-                BlockReceiptsTracer receiptsTracer, IReleaseSpec spec, CancellationToken token = default)
+                BlockExecutionTracer executionTracer, IReleaseSpec spec, CancellationToken token = default)
             {
                 // We start with high number as don't want to resize too much
                 const int defaultTxCount = 512;
@@ -96,7 +96,8 @@ namespace Nethermind.Consensus.Processing
                     // Check if we have gone over time or the payload has been requested
                     if (token.IsCancellationRequested) break;
 
-                    TxAction action = ProcessTransaction(block, in blkCtx, currentTx, i++, receiptsTracer, processingOptions, consideredTx);
+                    TxAction action = ProcessTransaction(block, in blkCtx, currentTx, i++, executionTracer, processingOptions, consideredTx);
+
                     if (action == TxAction.Stop) break;
 
                     consideredTx.Add(currentTx);
@@ -115,7 +116,7 @@ namespace Nethermind.Consensus.Processing
                 {
                     blockToProduce.Transactions = includedTx.ToArray();
                 }
-                return receiptsTracer.TxReceipts.ToArray();
+                return executionTracer.TxReceipts.ToArray();
             }
 
             private TxAction ProcessTransaction(
@@ -123,7 +124,7 @@ namespace Nethermind.Consensus.Processing
                 in BlockExecutionContext blkCtx,
                 Transaction currentTx,
                 int index,
-                BlockReceiptsTracer receiptsTracer,
+                BlockExecutionTracer executionTracer,
                 ProcessingOptions processingOptions,
                 HashSet<Transaction> transactionsInBlock)
             {
@@ -135,12 +136,12 @@ namespace Nethermind.Consensus.Processing
                 }
                 else
                 {
-                    TransactionResult result = _transactionProcessor.ProcessTransaction(in blkCtx, currentTx, receiptsTracer, processingOptions, stateProvider);
+                    TransactionResult result = _transactionProcessor.ProcessTransaction(in blkCtx, currentTx, executionTracer, processingOptions, stateProvider);
 
                     if (result)
                     {
                         _transactionProcessed?.Invoke(this,
-                            new TxProcessedEventArgs(index, currentTx, receiptsTracer.TxReceipts[index]));
+                            new TxProcessedEventArgs(index, currentTx, executionTracer.TxReceipts[index]));
                     }
                     else
                     {
