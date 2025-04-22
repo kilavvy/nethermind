@@ -12,6 +12,7 @@ using Nethermind.Consensus.AuRa.Config;
 using Nethermind.Core;
 using Nethermind.Core.Extensions;
 using Nethermind.Core.Specs;
+using Nethermind.Evm;
 using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.Serialization.Json;
@@ -21,11 +22,17 @@ using NUnit.Framework;
 
 namespace Nethermind.Specs.Test.ChainSpecStyle;
 
-[Parallelizable(ParallelScope.All)]
+[NonParallelizable]
 [TestFixture]
 public class ChainSpecBasedSpecProviderTests
 {
     private const double GnosisBlockTime = 5;
+
+    [SetUp]
+    public void Setup()
+    {
+        Eip4844Constants.OverrideIfAny(1);
+    }
 
     [TestCase(0, null, false)]
     [TestCase(0, 0ul, false)]
@@ -130,8 +137,10 @@ public class ChainSpecBasedSpecProviderTests
             yield return new TestCaseData((ForkActivation)(1735372, 1677557088)) { TestName = "1677557088" };
             yield return new TestCaseData((ForkActivation)(1735372, 1677557087)) { TestName = "1677557087" };
             yield return new TestCaseData(new ForkActivation(1735372, SepoliaSpecProvider.CancunTimestamp - 1)) { TestName = "Before Cancun" };
-            yield return new TestCaseData(new ForkActivation(1735372, SepoliaSpecProvider.CancunTimestamp)) { TestName = "Cancun" };
-            yield return new TestCaseData(new ForkActivation(1735372, SepoliaSpecProvider.CancunTimestamp + 100000000)) { TestName = "Future" };
+            yield return new TestCaseData(new ForkActivation(1735372, SepoliaSpecProvider.CancunTimestamp)) { TestName = "First Cancun" };
+            yield return new TestCaseData(new ForkActivation(1735372, SepoliaSpecProvider.CancunTimestamp + 100000000)) { TestName = "Cancun" };
+            yield return new TestCaseData(new ForkActivation(1735372, SepoliaSpecProvider.PragueTimestamp)) { TestName = "First Prague" };
+            yield return new TestCaseData(new ForkActivation(1735372, SepoliaSpecProvider.PragueTimestamp + 100000000)) { TestName = "Prague" };
         }
     }
 
@@ -151,6 +160,12 @@ public class ChainSpecBasedSpecProviderTests
 
         GetTransitionTimestamps(chainSpec.Parameters).Should().AllSatisfy(
             static t => ValidateSlotByTimestamp(t, SepoliaSpecProvider.BeaconChainGenesisTimestampConst).Should().BeTrue());
+        IReleaseSpec postCancunSpec = provider.GetSpec((2, SepoliaSpecProvider.CancunTimestamp));
+
+        VerifyCancunSpecificsForMainnetAndHoleskyAndSepolia(postCancunSpec);
+
+        IReleaseSpec postPragueSpec = provider.GetSpec((2, SepoliaSpecProvider.PragueTimestamp));
+        VerifyPragueSpecificsForMainnetHoleskyHoodiAndSepolia(provider.ChainId, postPragueSpec);
     }
 
     public static IEnumerable<TestCaseData> HoleskyActivations
@@ -162,7 +177,10 @@ public class ChainSpecBasedSpecProviderTests
             yield return new TestCaseData(new ForkActivation(3, HoleskySpecProvider.ShanghaiTimestamp + 24)) { TestName = "Post Shanghai" };
             yield return new TestCaseData(new ForkActivation(4, HoleskySpecProvider.CancunTimestamp - 1)) { TestName = "Before Cancun" };
             yield return new TestCaseData(new ForkActivation(5, HoleskySpecProvider.CancunTimestamp)) { TestName = "Cancun" };
-            yield return new TestCaseData(new ForkActivation(6, HoleskySpecProvider.CancunTimestamp + 100000000)) { TestName = "Future" };
+            yield return new TestCaseData(new ForkActivation(6, HoleskySpecProvider.CancunTimestamp + 24)) { TestName = "Post Cancun" };
+            yield return new TestCaseData(new ForkActivation(7, HoleskySpecProvider.PragueTimestamp - 1)) { TestName = "Before Prague" };
+            yield return new TestCaseData(new ForkActivation(8, HoleskySpecProvider.PragueTimestamp)) { TestName = "Prague" };
+            yield return new TestCaseData(new ForkActivation(9, HoleskySpecProvider.PragueTimestamp + 100000000)) { TestName = "Future Prague" };
         }
     }
 
@@ -180,9 +198,94 @@ public class ChainSpecBasedSpecProviderTests
         Assert.That(provider.ChainId, Is.EqualTo(BlockchainIds.Holesky));
         Assert.That(provider.NetworkId, Is.EqualTo(BlockchainIds.Holesky));
 
+        IReleaseSpec postCancunSpec = provider.GetSpec((2, HoleskySpecProvider.CancunTimestamp));
+        VerifyCancunSpecificsForMainnetAndHoleskyAndSepolia(postCancunSpec);
+        IReleaseSpec postPragueSpec = provider.GetSpec((2, HoleskySpecProvider.PragueTimestamp));
+        VerifyPragueSpecificsForMainnetHoleskyHoodiAndSepolia(provider.ChainId, postPragueSpec);
+
         // because genesis time for holesky is set 5 minutes before the launch of the chain. this test fails.
         //GetTransitionTimestamps(chainSpec.Parameters).Should().AllSatisfy(
         //    t => ValidateSlotByTimestamp(t, HoleskySpecProvider.GenesisTimestamp).Should().BeTrue());
+    }
+
+    private static void VerifyCancunSpecificsForMainnetAndHoleskyAndSepolia(IReleaseSpec spec)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(spec.BlobBaseFeeUpdateFraction, Is.EqualTo((UInt256)3338477));
+            Assert.That(spec.GetMaxBlobGasPerBlock(), Is.EqualTo(786432));
+            Assert.That(Eip4844Constants.MinBlobGasPrice, Is.EqualTo(1.Wei()));
+            Assert.That(spec.GetTargetBlobGasPerBlock(), Is.EqualTo(393216));
+        });
+    }
+
+    private static void VerifyPragueSpecificsForMainnetHoleskyHoodiAndSepolia(ulong chainId, IReleaseSpec spec)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(spec.BlobBaseFeeUpdateFraction, Is.EqualTo((UInt256)5007716));
+            Assert.That(spec.MaxBlobCount, Is.EqualTo(9));
+            Assert.That(spec.TargetBlobCount, Is.EqualTo(6));
+            Assert.That(spec.Eip2935ContractAddress, Is.EqualTo(Eip2935Constants.BlockHashHistoryAddress));
+        });
+
+        Address expectedDepositContractAddress;
+        switch (chainId)
+        {
+            case BlockchainIds.Mainnet:
+                expectedDepositContractAddress = Eip6110Constants.MainnetDepositContractAddress;
+                break;
+            case BlockchainIds.Holesky:
+                expectedDepositContractAddress = Eip6110Constants.HoleskyDepositContractAddress;
+                break;
+            case BlockchainIds.Hoodi:
+                expectedDepositContractAddress = Eip6110Constants.HoodiDepositContractAddress;
+                break;
+            case BlockchainIds.Sepolia:
+                expectedDepositContractAddress = Eip6110Constants.SepoliaDepositContractAddress;
+                break;
+            default:
+                Assert.Fail("Unrecognised chain id when verifying Prague specifics.");
+                return;
+        }
+
+        Assert.That(spec.DepositContractAddress, Is.EqualTo(expectedDepositContractAddress));
+    }
+
+    public static IEnumerable<TestCaseData> HoodiActivations
+    {
+        get
+        {
+            yield return new TestCaseData(new ForkActivation(0, HoodiSpecProvider.GenesisTimestamp)) { TestName = "Genesis" };
+            yield return new TestCaseData(new ForkActivation(1, HoodiSpecProvider.ShanghaiTimestamp)) { TestName = "Shanghai" };
+            yield return new TestCaseData(new ForkActivation(3, HoodiSpecProvider.ShanghaiTimestamp)) { TestName = "Post Shanghai" };
+            yield return new TestCaseData(new ForkActivation(4, HoodiSpecProvider.CancunTimestamp)) { TestName = "Before Cancun" };
+            yield return new TestCaseData(new ForkActivation(5, HoodiSpecProvider.CancunTimestamp)) { TestName = "Cancun" };
+            yield return new TestCaseData(new ForkActivation(6, HoodiSpecProvider.CancunTimestamp)) { TestName = "Post Cancun" };
+            yield return new TestCaseData(new ForkActivation(7, HoodiSpecProvider.PragueTimestamp - 1)) { TestName = "Before Prague" };
+            yield return new TestCaseData(new ForkActivation(8, HoodiSpecProvider.PragueTimestamp)) { TestName = "Prague" };
+            yield return new TestCaseData(new ForkActivation(9, HoodiSpecProvider.PragueTimestamp + 100000000)) { TestName = "Future Prague" };
+        }
+    }
+
+    [TestCaseSource(nameof(HoodiActivations))]
+    public void Hoodi_loads_properly(ForkActivation forkActivation)
+    {
+        ChainSpec chainSpec = LoadChainSpecFromChainFolder("hoodi");
+        ChainSpecBasedSpecProvider provider = new(chainSpec);
+        ISpecProvider hardCodedSpec = HoodiSpecProvider.Instance;
+
+        CompareSpecs(hardCodedSpec, provider, forkActivation);
+        Assert.That(provider.TerminalTotalDifficulty, Is.EqualTo(hardCodedSpec.TerminalTotalDifficulty));
+        Assert.That(provider.GenesisSpec.Eip1559TransitionBlock, Is.EqualTo(0));
+        Assert.That(provider.GenesisSpec.DifficultyBombDelay, Is.EqualTo(0));
+        Assert.That(provider.ChainId, Is.EqualTo(BlockchainIds.Hoodi));
+        Assert.That(provider.NetworkId, Is.EqualTo(BlockchainIds.Hoodi));
+
+        IReleaseSpec postCancunSpec = provider.GetSpec((2, HoodiSpecProvider.CancunTimestamp));
+        VerifyCancunSpecificsForMainnetAndHoleskyAndSepolia(postCancunSpec);
+        IReleaseSpec postPragueSpec = provider.GetSpec((2, HoodiSpecProvider.PragueTimestamp));
+        VerifyPragueSpecificsForMainnetHoleskyHoodiAndSepolia(provider.ChainId, postPragueSpec);
     }
 
     public static IEnumerable<TestCaseData> ChiadoActivations
@@ -196,6 +299,9 @@ public class ChainSpecBasedSpecProviderTests
             yield return new TestCaseData((ForkActivation)(1, ChiadoSpecProvider.CancunTimestamp - 1)) { TestName = "Before Cancun" };
             yield return new TestCaseData((ForkActivation)(1, ChiadoSpecProvider.CancunTimestamp)) { TestName = "Cancun" };
             yield return new TestCaseData((ForkActivation)(1, ChiadoSpecProvider.CancunTimestamp + 100000000)) { TestName = "Future" };
+            yield return new TestCaseData((ForkActivation)(1, ChiadoSpecProvider.PragueTimestamp - 1)) { TestName = "Before Prague" };
+            yield return new TestCaseData((ForkActivation)(1, ChiadoSpecProvider.PragueTimestamp)) { TestName = "Prague" };
+            yield return new TestCaseData((ForkActivation)(1, ChiadoSpecProvider.PragueTimestamp + 100000000)) { TestName = "Future" };
         }
     }
 
@@ -209,17 +315,25 @@ public class ChainSpecBasedSpecProviderTests
         ChiadoSpecProvider chiado = ChiadoSpecProvider.Instance;
 
         CompareSpecs(chiado, provider, forkActivation, CompareSpecsOptions.IsGnosis);
-        Assert.That(provider.TerminalTotalDifficulty, Is.EqualTo(ChiadoSpecProvider.Instance.TerminalTotalDifficulty));
-        Assert.That(provider.ChainId, Is.EqualTo(BlockchainIds.Chiado));
-        Assert.That(provider.NetworkId, Is.EqualTo(BlockchainIds.Chiado));
+        Assert.Multiple(() =>
+        {
+            Assert.That(provider.TerminalTotalDifficulty, Is.EqualTo(ChiadoSpecProvider.Instance.TerminalTotalDifficulty));
+            Assert.That(provider.ChainId, Is.EqualTo(BlockchainIds.Chiado));
+            Assert.That(provider.NetworkId, Is.EqualTo(BlockchainIds.Chiado));
+        });
 
         IReleaseSpec? preShanghaiSpec = provider.GetSpec((1, ChiadoSpecProvider.ShanghaiTimestamp - 1));
         IReleaseSpec? postShanghaiSpec = provider.GetSpec((1, ChiadoSpecProvider.ShanghaiTimestamp));
+        IReleaseSpec? postCancunSpec = provider.GetSpec((1, ChiadoSpecProvider.CancunTimestamp));
+        IReleaseSpec? prePragueSpec = provider.GetSpec((1, ChiadoSpecProvider.PragueTimestamp - 1));
+        IReleaseSpec? postPragueSpec = provider.GetSpec((1, ChiadoSpecProvider.PragueTimestamp));
 
         VerifyGnosisShanghaiSpecifics(preShanghaiSpec, postShanghaiSpec);
-        VerifyGnosisCancunSpecifics();
+        VerifyGnosisCancunSpecifics(postCancunSpec);
+        VerifyGnosisPragueSpecifics(prePragueSpec, postPragueSpec, ChiadoSpecProvider.FeeCollector);
         GetTransitionTimestamps(chainSpec.Parameters).Should().AllSatisfy(
             static t => ValidateSlotByTimestamp(t, ChiadoSpecProvider.BeaconChainGenesisTimestampConst, GnosisBlockTime).Should().BeTrue());
+        Assert.That(postPragueSpec.DepositContractAddress, Is.EqualTo(new Address("0xb97036A26259B7147018913bD58a774cf91acf25")));
     }
 
     public static IEnumerable<TestCaseData> GnosisActivations
@@ -248,6 +362,12 @@ public class ChainSpecBasedSpecProviderTests
             { TestName = "Cancun" };
             yield return new TestCaseData((ForkActivation)(GnosisSpecProvider.LondonBlockNumber + 2, GnosisSpecProvider.CancunTimestamp + 100000000))
             { TestName = "Future" };
+            yield return new TestCaseData((ForkActivation)(GnosisSpecProvider.LondonBlockNumber + 2, GnosisSpecProvider.PragueTimestamp - 1))
+            { TestName = "Before Prague" };
+            yield return new TestCaseData((ForkActivation)(GnosisSpecProvider.LondonBlockNumber + 2, GnosisSpecProvider.PragueTimestamp))
+            { TestName = "Prague" };
+            yield return new TestCaseData((ForkActivation)(GnosisSpecProvider.LondonBlockNumber + 2, GnosisSpecProvider.PragueTimestamp + 100000000))
+            { TestName = "Future" };
         }
     }
 
@@ -259,29 +379,52 @@ public class ChainSpecBasedSpecProviderTests
         GnosisSpecProvider gnosisSpecProvider = GnosisSpecProvider.Instance;
 
         CompareSpecs(gnosisSpecProvider, provider, forkActivation, CompareSpecsOptions.IsGnosis);
-        Assert.That(provider.TerminalTotalDifficulty, Is.EqualTo(GnosisSpecProvider.Instance.TerminalTotalDifficulty));
-        Assert.That(provider.ChainId, Is.EqualTo(BlockchainIds.Gnosis));
-        Assert.That(provider.NetworkId, Is.EqualTo(BlockchainIds.Gnosis));
+        Assert.Multiple(() =>
+        {
+            Assert.That(provider.TerminalTotalDifficulty, Is.EqualTo(GnosisSpecProvider.Instance.TerminalTotalDifficulty));
+            Assert.That(provider.ChainId, Is.EqualTo(BlockchainIds.Gnosis));
+            Assert.That(provider.NetworkId, Is.EqualTo(BlockchainIds.Gnosis));
+        });
 
         VerifyGnosisPreShanghaiSpecifics(provider);
 
         IReleaseSpec? preShanghaiSpec = provider.GetSpec((1, GnosisSpecProvider.ShanghaiTimestamp - 1));
         IReleaseSpec? postShanghaiSpec = provider.GetSpec((1, GnosisSpecProvider.ShanghaiTimestamp));
+        IReleaseSpec? postCancunSpec = provider.GetSpec((1, GnosisSpecProvider.CancunTimestamp));
+        IReleaseSpec? prePragueSpec = provider.GetSpec((1, GnosisSpecProvider.PragueTimestamp - 1));
+        IReleaseSpec? postPragueSpec = provider.GetSpec((1, GnosisSpecProvider.PragueTimestamp));
 
         VerifyGnosisShanghaiSpecifics(preShanghaiSpec, postShanghaiSpec);
-        VerifyGnosisCancunSpecifics();
+        VerifyGnosisCancunSpecifics(postCancunSpec);
+        VerifyGnosisPragueSpecifics(prePragueSpec, postPragueSpec, GnosisSpecProvider.FeeCollector);
+        Assert.That(postPragueSpec.DepositContractAddress, Is.EqualTo(new Address("0x0B98057eA310F4d31F2a452B414647007d1645d9")));
         GetTransitionTimestamps(chainSpec.Parameters).Should().AllSatisfy(
             static t => ValidateSlotByTimestamp(t, GnosisSpecProvider.BeaconChainGenesisTimestampConst, GnosisBlockTime).Should().BeTrue());
     }
 
-    private static void VerifyGnosisCancunSpecifics()
+    private static void VerifyGnosisPragueSpecifics(IReleaseSpec prePragueSpec, IReleaseSpec postPragueSpec, Address feeCollector)
     {
-        Assert.Multiple(static () =>
+        Assert.Multiple(() =>
         {
-            Assert.That(Eip4844Constants.BlobGasPriceUpdateFraction, Is.EqualTo((UInt256)1112826));
-            Assert.That(Eip4844Constants.MaxBlobGasPerBlock, Is.EqualTo(262144));
+            Assert.That(prePragueSpec.FeeCollector, Is.EqualTo(feeCollector));
+            Assert.That(postPragueSpec.FeeCollector, Is.EqualTo(feeCollector));
+            Assert.That(prePragueSpec.IsEip4844FeeCollectorEnabled, Is.EqualTo(false));
+            Assert.That(postPragueSpec.IsEip4844FeeCollectorEnabled, Is.EqualTo(true));
+            Assert.That(postPragueSpec.Eip2935ContractAddress, Is.EqualTo(Eip2935Constants.BlockHashHistoryAddress));
+        });
+
+        // should be unchanged
+        VerifyGnosisCancunSpecifics(postPragueSpec);
+    }
+
+    private static void VerifyGnosisCancunSpecifics(IReleaseSpec spec)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(spec.BlobBaseFeeUpdateFraction, Is.EqualTo((UInt256)1112826));
+            Assert.That(spec.GetMaxBlobGasPerBlock(), Is.EqualTo(262144));
             Assert.That(Eip4844Constants.MinBlobGasPrice, Is.EqualTo(1.GWei()));
-            Assert.That(Eip4844Constants.TargetBlobGasPerBlock, Is.EqualTo(131072));
+            Assert.That(spec.GetTargetBlobGasPerBlock(), Is.EqualTo(131072));
         });
     }
 
@@ -346,7 +489,9 @@ public class ChainSpecBasedSpecProviderTests
             yield return new TestCaseData(MainnetSpecProvider.ShanghaiActivation) { TestName = "Shanghai" };
             yield return new TestCaseData(new ForkActivation(MainnetSpecProvider.ParisBlockNumber, MainnetSpecProvider.CancunBlockTimestamp - 1)) { TestName = "Before Cancun" };
             yield return new TestCaseData(MainnetSpecProvider.CancunActivation) { TestName = "Cancun" };
-            yield return new TestCaseData(new ForkActivation(MainnetSpecProvider.ParisBlockNumber, MainnetSpecProvider.CancunBlockTimestamp + 100000000)) { TestName = "Future" };
+            yield return new TestCaseData(new ForkActivation(MainnetSpecProvider.ParisBlockNumber, MainnetSpecProvider.PragueBlockTimestamp - 1)) { TestName = "Before Prague" };
+            yield return new TestCaseData(MainnetSpecProvider.PragueActivation) { TestName = "Prague" };
+            yield return new TestCaseData(new ForkActivation(MainnetSpecProvider.ParisBlockNumber, MainnetSpecProvider.PragueBlockTimestamp + 100000000)) { TestName = "Future" };
         }
     }
 
@@ -384,6 +529,11 @@ public class ChainSpecBasedSpecProviderTests
 
         GetTransitionTimestamps(chainSpec.Parameters).Should().AllSatisfy(
             static t => ValidateSlotByTimestamp(t, MainnetSpecProvider.BeaconChainGenesisTimestampConst).Should().BeTrue());
+        IReleaseSpec postCancunSpec = provider.GetSpec(MainnetSpecProvider.CancunActivation);
+        IReleaseSpec postPragueSpec = provider.GetSpec(MainnetSpecProvider.PragueActivation);
+
+        VerifyCancunSpecificsForMainnetAndHoleskyAndSepolia(postCancunSpec);
+        VerifyPragueSpecificsForMainnetHoleskyHoodiAndSepolia(provider.ChainId, postPragueSpec);
     }
 
     [Flags]
