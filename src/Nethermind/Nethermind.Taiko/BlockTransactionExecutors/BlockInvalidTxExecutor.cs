@@ -20,6 +20,10 @@ public class BlockInvalidTxExecutor(ITransactionProcessorAdapter txProcessor, IW
     private readonly ITransactionProcessorAdapter _txProcessor = txProcessor;
 
     public event EventHandler<TxProcessedEventArgs>? TransactionProcessed;
+    public IBlockProcessor.IBlockTransactionsExecutor WithNewStateProvider(IWorldState worldState)
+    {
+        return new BlockInvalidTxExecutor(_txProcessor, worldState);
+    }
 
     public TxReceipt[] ProcessTransactions(Block block, ProcessingOptions processingOptions, BlockExecutionTracer executionTracer, IReleaseSpec spec, CancellationToken token)
     {

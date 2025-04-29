@@ -27,13 +27,12 @@ namespace Nethermind.Consensus.Processing
     public partial class BlockProcessor
     {
         public class BlockProductionTransactionsExecutor(
-            ITransactionProcessor txProcessor,
+            ITransactionProcessorAdapter transactionProcessor,
             IWorldState stateProvider,
             IBlockProductionTransactionPicker txPicker,
             ILogManager logManager)
             : IBlockProductionTransactionsExecutor
         {
-            private readonly ITransactionProcessorAdapter _transactionProcessor = new BuildUpTransactionProcessorAdapter(txProcessor);
             private readonly ILogger _logger = logManager.GetClassLogger();
 
             public BlockProductionTransactionsExecutor(
@@ -55,8 +54,17 @@ namespace Nethermind.Consensus.Processing
                 IWorldState stateProvider,
                 ISpecProvider specProvider,
                 ILogManager logManager,
-                long maxTxLengthKilobytes = BlocksConfig.DefaultMaxTxKilobytes) : this(transactionProcessor, stateProvider,
+                long maxTxLengthKilobytes = BlocksConfig.DefaultMaxTxKilobytes) : this(new BuildUpTransactionProcessorAdapter(transactionProcessor), stateProvider,
                 new BlockProductionTransactionPicker(specProvider, maxTxLengthKilobytes), logManager)
+            {
+            }
+
+            public BlockProductionTransactionsExecutor(
+                ITransactionProcessor transactionProcessor,
+                IWorldState stateProvider,
+                IBlockProductionTransactionPicker txPicker,
+                ILogManager logManager) : this(new BuildUpTransactionProcessorAdapter(transactionProcessor), stateProvider,
+                txPicker, logManager)
             {
             }
 
@@ -66,6 +74,11 @@ namespace Nethermind.Consensus.Processing
             {
                 add => _transactionProcessed += value;
                 remove => _transactionProcessed -= value;
+            }
+
+            public IBlockProcessor.IBlockTransactionsExecutor WithNewStateProvider(IWorldState worldState)
+            {
+                return new BlockProductionTransactionsExecutor(transactionProcessor, worldState, txPicker, logManager);
             }
 
             event EventHandler<AddingTxEventArgs>? IBlockProductionTransactionsExecutor.AddingTransaction
@@ -136,7 +149,7 @@ namespace Nethermind.Consensus.Processing
                 }
                 else
                 {
-                    TransactionResult result = _transactionProcessor.ProcessTransaction(in blkCtx, currentTx, executionTracer, processingOptions, stateProvider);
+                    TransactionResult result = transactionProcessor.ProcessTransaction(in blkCtx, currentTx, executionTracer, processingOptions, stateProvider);
 
                     if (result)
                     {
