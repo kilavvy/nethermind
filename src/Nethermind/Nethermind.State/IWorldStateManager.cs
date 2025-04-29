@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using Nethermind.Core;
+using Nethermind.Db;
 using Nethermind.State.Healing;
 using Nethermind.State.SnapServer;
 using Nethermind.Trie.Pruning;
@@ -32,7 +33,7 @@ public interface IWorldStateManager: IStoreWithReorgBoundary
 
     // TODO: These two method can be combined
     IOverridableWorldScope CreateOverridableWorldScope();
-    IWorldState CreateOverlayWorldState(IKeyValueStoreWithBatching overlayState, IKeyValueStoreWithBatching overlayCode);
+    IWorldState CreateOverlayWorldState(IReadOnlyDbProvider editableDbProvider);
 
     void InitializeNetwork(IPathRecovery pathRecovery);
 

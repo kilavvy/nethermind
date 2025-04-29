@@ -1,48 +1,54 @@
-// SPDX-FileCopyrightText: 2023 Demerzel Solutions Limited
+// SPDX-FileCopyrightText: 2025 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
-using System.Threading;
 using Nethermind.Core;
 using Nethermind.Db;
 using Nethermind.Logging;
+using Nethermind.Verkle.Tree.TreeStore;
+using Nethermind.Verkle.Tree.VerkleDb;
+using System.Threading;
 using Nethermind.State.Healing;
 using Nethermind.State.SnapServer;
-using Nethermind.Trie;
 using Nethermind.Trie.Pruning;
+
 
 namespace Nethermind.State;
 
-public class WorldStateManager : IWorldStateManager
+public class VerkleWorldStateManager: IWorldStateManager
 {
     private readonly IWorldState _worldState;
-    private readonly ITrieStore _trieStore;
-    private readonly IReadOnlyTrieStore _readOnlyTrieStore;
+    private readonly IVerkleTreeStore _trieStore;
+    private readonly IReadOnlyVerkleTreeStore _readOnlyTrieStore;
     private readonly ILogManager _logManager;
     private readonly ReadOnlyDb _readaOnlyCodeCb;
     private readonly IDbProvider _dbProvider;
     private readonly BlockingVerifyTrie? _blockingVerifyTrie;
+
+    // can be used to verkle sync
     private readonly ILastNStateRootTracker _lastNStateRootTracker;
 
-    public WorldStateManager(
+
+    public VerkleWorldStateManager(
         IWorldState worldState,
-        ITrieStore trieStore,
+        IVerkleTreeStore trieStore,
         IDbProvider dbProvider,
         ILogManager logManager,
         ILastNStateRootTracker lastNStateRootTracker = null
     )
     {
         _dbProvider = dbProvider;
-        _worldState = worldState;
         _trieStore = trieStore;
-        _readOnlyTrieStore = trieStore.AsReadOnly();
+        _readOnlyTrieStore = trieStore.AsReadOnly(new VerkleMemoryDb());
+        _worldState = worldState;
         _logManager = logManager;
 
         IReadOnlyDbProvider readOnlyDbProvider = dbProvider.AsReadOnly(false);
         _readaOnlyCodeCb = readOnlyDbProvider.GetDb<IDb>(DbNames.Code).AsReadOnly(true);
-        GlobalStateReader = new StateReader(_readOnlyTrieStore, _readaOnlyCodeCb, _logManager);
-        _blockingVerifyTrie = new BlockingVerifyTrie(trieStore, GlobalStateReader, _readaOnlyCodeCb!, logManager);
+        GlobalStateReader = new VerkleStateReader(_readOnlyTrieStore, _readaOnlyCodeCb, _logManager);
+        _blockingVerifyTrie = new BlockingVerifyTrie(null, GlobalStateReader, _readaOnlyCodeCb!, logManager);
         _lastNStateRootTracker = lastNStateRootTracker;
+
     }
 
     public static WorldStateManager CreateForTest(IDbProvider dbProvider, ILogManager logManager)
@@ -53,9 +59,8 @@ public class WorldStateManager : IWorldStateManager
         return new WorldStateManager(worldState, trieStore, dbProvider, logManager);
     }
 
+    public IReadOnlyKeyValueStore? HashServer => throw new NotImplementedException();
     public IWorldState GlobalWorldState => _worldState;
-
-    public IReadOnlyKeyValueStore? HashServer => _trieStore.Scheme != INodeStorage.KeyScheme.Hash ? null : _trieStore.TrieNodeRlpStore;
 
     public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached
     {
@@ -65,19 +70,15 @@ public class WorldStateManager : IWorldStateManager
 
     public void InitializeNetwork(IPathRecovery pathRecovery)
     {
-        if (_worldState is HealingWorldState healingWorldState)
-        {
-            healingWorldState.InitializeNetwork(pathRecovery);
-        }
     }
 
     public IStateReader GlobalStateReader { get; }
 
-    public ISnapServer? SnapServer => _trieStore.Scheme == INodeStorage.KeyScheme.Hash ? null : new SnapServer.SnapServer(_readOnlyTrieStore, _readaOnlyCodeCb, GlobalStateReader, _logManager, _lastNStateRootTracker);
+    public ISnapServer? SnapServer =>  throw new NotImplementedException();
 
     public IWorldState CreateResettableWorldState()
     {
-        return new WorldState(
+        return new VerkleWorldState(
             _readOnlyTrieStore,
             _readaOnlyCodeCb,
             _logManager);
@@ -86,13 +87,8 @@ public class WorldStateManager : IWorldStateManager
     public IWorldState CreateWorldStateForWarmingUp(IWorldState forWarmup)
     {
         PreBlockCaches? preBlockCaches = (forWarmup as IPreBlockCaches)?.Caches;
-        return preBlockCaches is not null
-            ? new WorldState(
-                new PreCachedTrieStore(_readOnlyTrieStore, preBlockCaches.RlpCache),
-                _readaOnlyCodeCb,
-                _logManager,
-                preBlockCaches)
-            : CreateResettableWorldState();
+        // TODO: fix this as well to actually use the preBlockCache
+        return CreateResettableWorldState();
     }
 
     public IOverridableWorldScope CreateOverridableWorldScope()
@@ -102,8 +98,8 @@ public class WorldStateManager : IWorldStateManager
 
     public IWorldState CreateOverlayWorldState(IReadOnlyDbProvider editableDbProvider)
     {
-        OverlayTrieStore overlayTrieStore = new(editableDbProvider.StateDb, _readOnlyTrieStore, _logManager);
-        return new WorldState(overlayTrieStore, editableDbProvider.CodeDb, _logManager);
+        OverlayVerkleTreeStore overlayTrieStore = new(editableDbProvider, _readOnlyTrieStore, _logManager);
+        return new VerkleWorldState(overlayTrieStore, editableDbProvider.CodeDb, _logManager);
     }
 
     public bool VerifyTrie(BlockHeader stateAtBlock, CancellationToken cancellationToken)
