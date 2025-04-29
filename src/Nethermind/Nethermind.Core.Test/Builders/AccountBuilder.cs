@@ -25,6 +25,7 @@ namespace Nethermind.Core.Test.Builders
             return this;
         }
 
+        // TODO: check if this is not being used in tests where the actual code is being used somewhere
         public AccountBuilder WithCode(byte[] code)
         {
             TestObjectInternal = TestObjectInternal.WithChangedCodeHash((UInt256)code.Length, Keccak.Compute(code));
