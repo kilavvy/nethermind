@@ -18,7 +18,7 @@ public class AccountHeaderTests
     public void TestGetStorageKeyWithoutOverflow()
     {
         var address = new Address(Bytes.FromHexString("0xc2494a4e8eebd8e63bd3a5c91b60206661d396d5"));
-        byte[] data = Bytes.FromHexString("ff0d54412868ab2569622781556c0b41264d9dae313826adad7b60da4b441e67");
+        var data = Bytes.FromHexString("ff0d54412868ab2569622781556c0b41264d9dae313826adad7b60da4b441e67");
 
         var index = new UInt256(data, true);
         Hash256? storageKey = AccountHeader.GetTreeKeyForStorageSlot(address.Bytes, index);
@@ -31,15 +31,15 @@ public class AccountHeaderTests
     public void TestGetTreeKey()
     {
         Span<byte> addr = new byte[32];
-        for (int i = 0; i < 16; i++)
+        for (var i = 0; i < 16; i++)
         {
             addr[1 + 2 * i] = 255;
         }
 
         UInt256 n = 1;
-        n = n << 129;
-        n = n + 3;
-        byte[] key = PedersenHash.Hash(addr, n);
+        n <<= 129;
+        n += 3;
+        var key = PedersenHash.Hash(addr, n);
         key[31] = 1;
 
         key.ToHexString().Should().BeEquivalentTo("6ede905763d5856cd2d67936541e82aa78f7141bf8cd5ff6c962170f3e9dc201");
@@ -67,14 +67,14 @@ public class AccountHeaderTests
 
         codeEnumerator.TryGetNextChunk(out byte[] value);
         value.Should().NotBeNull();
-        value[0..6].Should().BeEquivalentTo(new byte[] { 0, 97, 1, 2, 3, 4 });
+        value[..6].Should().BeEquivalentTo(new byte[] { 0, 97, 1, 2, 3, 4 });
         value[6..32].Should().BeEquivalentTo(new byte[26]);
 
-        byte[] code2 =
+        var code2 =
             Bytes.FromHexString(
                 "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c641e1f202122232425262728292a2b2c2d");
-        byte[] firstCodeChunk = Bytes.FromHexString("0x00000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c641e");
-        byte[] secondCodeChunk = Bytes.FromHexString("0x041f202122232425262728292a2b2c2d");
+        var firstCodeChunk = Bytes.FromHexString("0x00000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c641e");
+        var secondCodeChunk = Bytes.FromHexString("0x041f202122232425262728292a2b2c2d");
 
         codeEnumerator = new CodeChunkEnumerator(code2);
 
@@ -84,7 +84,7 @@ public class AccountHeaderTests
 
         codeEnumerator.TryGetNextChunk(out value);
         value.Should().NotBeNull();
-        value[0..16].Should().BeEquivalentTo(secondCodeChunk);
+        value[..16].Should().BeEquivalentTo(secondCodeChunk);
         value[16..32].Should().BeEquivalentTo(new byte[16]);
 
     }
@@ -156,6 +156,6 @@ public class AccountHeaderTests
         value.Should().BeEquivalentTo(secondCodeChunk);
 
         codeEnumerator.TryGetNextChunk(out value);
-        value[0..5].Should().BeEquivalentTo(thirdCodeChunk);
+        value[..5].Should().BeEquivalentTo(thirdCodeChunk);
     }
 }

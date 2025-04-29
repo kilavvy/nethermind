@@ -40,7 +40,7 @@ public partial class VerkleTree
         VerkleProof proof = CreateVerkleProof(keys, out rootPoint);
 
         Dictionary<byte[], List<SuffixStateDiff>> stemStateDiff = new(Bytes.EqualityComparer);
-        Dictionary<byte[], List<SuffixStateDiff>>.AlternateLookup<Span<byte>> stemStateDiffSpan = stemStateDiff.GetAlternateLookup<Span<byte>>();
+        Dictionary<byte[], List<SuffixStateDiff>>.AlternateLookup<ReadOnlySpan<byte>> stemStateDiffSpan = stemStateDiff.GetAlternateLookup<ReadOnlySpan<byte>>();
         foreach (Hash256? keyHash in keys)
         {
             Span<byte> key = keyHash.Bytes;

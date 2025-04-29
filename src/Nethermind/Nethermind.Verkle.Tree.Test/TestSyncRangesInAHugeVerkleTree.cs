@@ -363,6 +363,7 @@ public class TestSyncRangesInAHugeVerkleTree
 
         localTree.Accept(oldTreeDumper, localTree.StateRoot);
         remoteTree.Accept(newTreeDumper, remoteTree.StateRoot);
+        localStore.StateRoot.Should().BeEquivalentTo(remoteTree.StateRoot);
 
         Console.WriteLine("oldTreeDumper");
         Console.WriteLine(oldTreeDumper.ToString());

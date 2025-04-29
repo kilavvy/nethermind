@@ -77,6 +77,7 @@
     <Project Path="Nethermind.Trie.Test/Nethermind.Trie.Test.csproj" />
     <Project Path="Nethermind.TxPool.Test/Nethermind.TxPool.Test.csproj" />
     <Project Path="Nethermind.Verkle.Tests\Nethermind.Verkle.Tests.csproj" Type="Classic C#" />
+    <Project Path="Nethermind.Verkle.Tree.Test\Nethermind.Verkle.Tree.Test.csproj" Type="Classic C#" />
     <Project Path="Nethermind.Wallet.Test/Nethermind.Wallet.Test.csproj" />
   </Folder>
   <Folder Name="/Tools/">
@@ -129,7 +130,6 @@
   <Project Path="Nethermind.Taiko/Nethermind.Taiko.csproj" />
   <Project Path="Nethermind.Trie/Nethermind.Trie.csproj" />
   <Project Path="Nethermind.TxPool/Nethermind.TxPool.csproj" />
-  <Project Path="Nethermind.Verkle.Tree.Test\Nethermind.Verkle.Tree.Test.csproj" Type="Classic C#" />
   <Project Path="Nethermind.Verkle.Tree\Nethermind.Verkle.Tree.csproj" Type="Classic C#" />
   <Project Path="Nethermind.Verkle\Nethermind.Verkle.csproj" Type="Classic C#" />
   <Project Path="Nethermind.Wallet/Nethermind.Wallet.csproj" />
