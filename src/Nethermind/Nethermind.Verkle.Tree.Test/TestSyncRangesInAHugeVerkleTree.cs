@@ -305,7 +305,7 @@ public class TestSyncRangesInAHugeVerkleTree
             update = new SortedSet<byte[]>(Bytes.Comparer);
             for (int accountIndex = 0; accountIndex < leafPerBlock; accountIndex++)
             {
-                byte[] leafValue = new byte[32];
+                var leafValue = new byte[32];
                 Random.NextBytes(leafValue);
                 Hash256 path = pathPool[Random.Next(pathPool.Length - 1)];
 
