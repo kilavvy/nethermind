@@ -89,5 +89,12 @@ namespace Nethermind.Evm
         public const long Callf = 5;
         public const long Jumpf = 5;
         public const long Retf = 3;
+
+        // Stateless Execution - Eip 4762
+        public const long WitnessChunkRead = 200;
+        public const long WitnessChunkWrite = 500;
+        public const long WitnessChunkFill = 6200;
+        public const long WitnessBranchRead = 1900;
+        public const long WitnessBranchWrite = 3000;
     }
 }
