@@ -28,7 +28,7 @@ public class VerkleExecWitness(ILogManager logManager, VerkleWorldState? verkleW
     private readonly VerkleWorldState _verkleWorldState =
         verkleWorldState ?? throw new ArgumentNullException(nameof(verkleWorldState));
 
-    private bool ChargeFillCost { get; } = false;
+    public bool ChargeFillCost { get; init; } = true;
 
 
     /// <summary>
