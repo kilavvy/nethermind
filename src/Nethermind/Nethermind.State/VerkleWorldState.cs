@@ -97,7 +97,7 @@ public class VerkleWorldState : IWorldState
         _logger = logManager?.GetClassLogger<WorldState>() ?? throw new ArgumentNullException(nameof(logManager));
         _codeDb = codeDb ?? throw new ArgumentNullException(nameof(codeDb));
         Tree = new VerkleStateTree(verkleStateStore, logManager);
-        _persistentStorageProvider = new VerklePersistentStorageProvider(Tree, preBlockCaches.StorageCache, populatePreBlockCache, logManager);
+        _persistentStorageProvider = new VerklePersistentStorageProvider(Tree, preBlockCaches?.StorageCache, populatePreBlockCache, logManager);
         _transientStorageProvider = new VerkleTransientStorageProvider(logManager);
     }
 
@@ -108,7 +108,7 @@ public class VerkleWorldState : IWorldState
         _logger = logManager?.GetClassLogger<WorldState>() ?? throw new ArgumentNullException(nameof(logManager));
         Tree = VerkleStateTree.CreateStatelessTreeFromExecutionWitness(executionWitness, root, logManager);
         _codeDb = new MemDb();
-        _persistentStorageProvider = new VerklePersistentStorageProvider(Tree, preBlockCaches.StorageCache, populatePreBlockCache, logManager);
+        _persistentStorageProvider = new VerklePersistentStorageProvider(Tree, preBlockCaches?.StorageCache, populatePreBlockCache, logManager);
         _transientStorageProvider = new VerkleTransientStorageProvider(logManager);
     }
 
