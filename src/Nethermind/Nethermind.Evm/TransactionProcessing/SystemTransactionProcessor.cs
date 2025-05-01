@@ -32,6 +32,11 @@ public sealed class SystemTransactionProcessor : TransactionProcessorBase
         _isAura = SpecProvider.SealEngine == SealEngineType.AuRa;
     }
 
+    public override ITransactionProcessor WithNewStateProvider(IWorldState worldState)
+    {
+        return new SystemTransactionProcessor(SpecProvider, worldState, VirtualMachine, CodeInfoRepository, LogManager);
+    }
+
     protected override TransactionResult Execute(Transaction tx, in BlockExecutionContext blCtx, ITxTracer tracer, ExecutionOptions opts)
     {
         if (_isAura && !blCtx.Header.IsGenesis)

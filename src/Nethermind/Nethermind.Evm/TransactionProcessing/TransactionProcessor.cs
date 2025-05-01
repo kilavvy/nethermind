@@ -29,7 +29,13 @@ namespace Nethermind.Evm.TransactionProcessing
         IVirtualMachine? virtualMachine,
         ICodeInfoRepository? codeInfoRepository,
         ILogManager? logManager)
-        : TransactionProcessorBase(specProvider, worldState, virtualMachine, codeInfoRepository, logManager);
+        : TransactionProcessorBase(specProvider, worldState, virtualMachine, codeInfoRepository, logManager)
+    {
+        public override ITransactionProcessor WithNewStateProvider(IWorldState worldState)
+        {
+            return new TransactionProcessor(SpecProvider, worldState, VirtualMachine, CodeInfoRepository, LogManager);
+        }
+    }
 
     public abstract class TransactionProcessorBase : ITransactionProcessor
     {
@@ -38,9 +44,9 @@ namespace Nethermind.Evm.TransactionProcessing
         protected ISpecProvider SpecProvider { get; }
         protected IWorldState WorldState { get; }
         protected IVirtualMachine VirtualMachine { get; }
-        private readonly ICodeInfoRepository _codeInfoRepository;
+        protected readonly ICodeInfoRepository CodeInfoRepository;
         private SystemTransactionProcessor? _systemTransactionProcessor;
-        private readonly ILogManager _logManager;
+        protected readonly ILogManager LogManager;
 
         [Flags]
         protected enum ExecutionOptions
@@ -93,10 +99,10 @@ namespace Nethermind.Evm.TransactionProcessing
             SpecProvider = specProvider;
             WorldState = worldState;
             VirtualMachine = virtualMachine;
-            _codeInfoRepository = codeInfoRepository;
+            CodeInfoRepository = codeInfoRepository;
 
             Ecdsa = new EthereumEcdsa(specProvider.ChainId);
-            _logManager = logManager;
+            LogManager = logManager;
         }
 
         public TransactionResult CallAndRestore(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
@@ -119,12 +125,14 @@ namespace Nethermind.Evm.TransactionProcessing
         public TransactionResult Warmup(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
             ExecuteCore(transaction, in blCtx, txTracer, ExecutionOptions.SkipValidation);
 
+        public abstract ITransactionProcessor WithNewStateProvider(IWorldState worldState);
+
         private TransactionResult ExecuteCore(Transaction tx, in BlockExecutionContext blCtx, ITxTracer tracer, ExecutionOptions opts)
         {
             if (Logger.IsTrace) Logger.Trace($"Executing tx {tx.Hash}");
             if (tx.IsSystem() || opts == ExecutionOptions.SkipValidation)
             {
-                _systemTransactionProcessor ??= new SystemTransactionProcessor(SpecProvider, WorldState, VirtualMachine, _codeInfoRepository, _logManager);
+                _systemTransactionProcessor ??= new SystemTransactionProcessor(SpecProvider, WorldState, VirtualMachine, CodeInfoRepository, LogManager);
                 return _systemTransactionProcessor.Execute(tx, new BlockExecutionContext(blCtx.Header, SpecProvider.GetSpec(blCtx.Header)), tracer, opts);
             }
 
@@ -172,7 +180,7 @@ namespace Nethermind.Evm.TransactionProcessing
             int delegationRefunds = ProcessDelegations(tx, spec, accessTracker);
 
             long gasAvailable = tx.GasLimit - intrinsicGas.Standard;
-            if (!(result = BuildExecutionEnvironment(tx, in blCtx, spec, effectiveGasPrice, _codeInfoRepository, executionWitness, accessTracker, out ExecutionEnvironment env))) return result;
+            if (!(result = BuildExecutionEnvironment(tx, in blCtx, spec, effectiveGasPrice, CodeInfoRepository, executionWitness, accessTracker, out ExecutionEnvironment env))) return result;
             GasConsumed spentGas;
             byte statusCode;
             TransactionSubstate? substate;
@@ -265,7 +273,7 @@ namespace Nethermind.Evm.TransactionProcessing
                             WorldState.IncrementNonce(authTuple.Authority);
                         }
 
-                        _codeInfoRepository.SetDelegation(WorldState, authTuple.CodeAddress, authTuple.Authority, spec);
+                        CodeInfoRepository.SetDelegation(WorldState, authTuple.CodeAddress, authTuple.Authority, spec);
                     }
                 }
 
@@ -302,7 +310,7 @@ namespace Nethermind.Evm.TransactionProcessing
 
                 accessTracker.WarmUp(authorizationTuple.Authority);
 
-                if (WorldState.HasCode(authorizationTuple.Authority) && !_codeInfoRepository.TryGetDelegation(WorldState, authorizationTuple.Authority, spec, out _))
+                if (WorldState.HasCode(authorizationTuple.Authority) && !CodeInfoRepository.TryGetDelegation(WorldState, authorizationTuple.Authority, spec, out _))
                 {
                     error = $"Authority ({authorizationTuple.Authority}) has code deployed.";
                     return false;
@@ -641,7 +649,7 @@ namespace Nethermind.Evm.TransactionProcessing
                     }
 
                     // if transaction is a contract creation then recipient address is the contract deployment address
-                    if (!PrepareAccountForContractDeployment(env.ExecutingAccount, _codeInfoRepository, spec))
+                    if (!PrepareAccountForContractDeployment(env.ExecutingAccount, CodeInfoRepository, spec))
                     {
                         goto FailContractCreate;
                     }
@@ -746,7 +754,7 @@ namespace Nethermind.Evm.TransactionProcessing
 
                 // Copy the bytes so it's not live memory that will be used in another tx
                 byte[] code = substate.Output.Bytes.ToArray();
-                _codeInfoRepository.InsertCode(WorldState, code, env.ExecutingAccount, spec);
+                CodeInfoRepository.InsertCode(WorldState, code, env.ExecutingAccount, spec);
 
                 if (!env.Witness.AccessForContractCreated(env.ExecutingAccount, ref unspentGas))
                 {
@@ -770,7 +778,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 {
                     // Copy the bytes so it's not live memory that will be used in another tx
                     byte[] code = substate.Output.Bytes.ToArray();
-                    _codeInfoRepository.InsertCode(WorldState, code, env.ExecutingAccount, spec);
+                    CodeInfoRepository.InsertCode(WorldState, code, env.ExecutingAccount, spec);
 
                     unspentGas -= codeDepositGasCost;
                 }
@@ -822,7 +830,7 @@ namespace Nethermind.Evm.TransactionProcessing
             {
                 // 4 - set state[new_address].code to the updated deploy container
                 // push new_address onto the stack (already done before the ifs)
-                _codeInfoRepository.InsertCode(WorldState, bytecodeResult, env.ExecutingAccount, spec);
+                CodeInfoRepository.InsertCode(WorldState, bytecodeResult, env.ExecutingAccount, spec);
                 unspentGas -= codeDepositGasCost;
             }
 
