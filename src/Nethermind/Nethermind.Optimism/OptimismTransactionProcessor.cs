@@ -25,6 +25,11 @@ public class OptimismTransactionProcessor(
 {
     private UInt256? _currentTxL1Cost;
 
+    public override ITransactionProcessor WithNewStateProvider(IWorldState worldState)
+    {
+        return new OptimismTransactionProcessor(SpecProvider, worldState, VirtualMachine, LogManager, l1CostHelper, opSpecHelper, CodeInfoRepository);
+    }
+
     protected override TransactionResult Execute(Transaction tx, in BlockExecutionContext blCtx, ITxTracer tracer, ExecutionOptions opts)
     {
         if (tx.SupportsBlobs)

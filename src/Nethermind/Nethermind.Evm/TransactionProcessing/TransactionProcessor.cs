@@ -171,7 +171,9 @@ namespace Nethermind.Evm.TransactionProcessing
 
             // execution witness to collect access events and consume gas
             // TODO: declare StatelessExecutionWitness
-            IExecutionWitness executionWitness = new NoExecWitness();
+            IExecutionWitness executionWitness = spec.IsEip4762Enabled
+                ? new VerkleExecWitness(LogManager, WorldState as VerkleWorldState) {ChargeFillCost = false}
+                : new NoExecWitness();
             executionWitness.AccessForTransaction(tx.SenderAddress!, tx.To!, !tx.Value.IsZero);
 
             // substate.Logs contains a reference to accessTracker.Logs so we can't Dispose until end of the method

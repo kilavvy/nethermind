@@ -23,6 +23,11 @@ public class TaikoTransactionProcessor(
     ILogManager? logManager
     ) : TransactionProcessorBase(specProvider, worldState, virtualMachine, codeInfoRepository, logManager)
 {
+    public override ITransactionProcessor WithNewStateProvider(IWorldState worldState)
+    {
+        return new TaikoTransactionProcessor(SpecProvider, worldState, VirtualMachine, CodeInfoRepository, LogManager);
+    }
+
     protected override TransactionResult ValidateStatic(Transaction tx, BlockHeader header, IReleaseSpec spec, ExecutionOptions opts,
         in IntrinsicGas intrinsicGas)
         => base.ValidateStatic(tx, header, spec, tx.IsAnchorTx ? opts | ExecutionOptions.SkipValidationAndCommit : opts, in intrinsicGas);

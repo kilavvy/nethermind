@@ -465,7 +465,7 @@ public class VerkleWorldState : IWorldState
 
     public void ClearStorage(Address address)
     {
-        throw new StateDeleteNotSupported();
+        // throw new StateDeleteNotSupported();
     }
 
     public void CreateAccount(Address address, in UInt256 balance)

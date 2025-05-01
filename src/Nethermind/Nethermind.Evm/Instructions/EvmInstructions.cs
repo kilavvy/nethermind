@@ -337,6 +337,7 @@ internal static unsafe partial class EvmInstructions
     /// <param name="vm">The virtual machine instance.</param>
     /// <param name="address">The target account address.</param>
     /// <param name="chargeForWarm">If true, applies the warm read gas cost even if the account is warm.</param>
+    /// <param name="opCode"></param>
     /// <returns>True if the gas charge was successful; otherwise false.</returns>
     private static bool ChargeAccountAccessGas(ref long gasAvailable, VirtualMachine vm, Address address, bool chargeForWarm = true, Instruction opCode = Instruction.STOP)
     {
@@ -392,14 +393,18 @@ internal static unsafe partial class EvmInstructions
         }
         if (spec.UseHotAndColdStorage)
         {
-            if (vm.TxTracer.IsTracingAccess || witnessGasCharged)
+            if (vm.TxTracer.IsTracingAccess)
             {
                 // Ensure that tracing simulates access-list behavior.
                 vmState.AccessTracker.WarmUp(address);
             }
 
+            if (witnessGasCharged)
+            {
+                vmState.AccessTracker.WarmUp(address);
+            }
             // If the account is cold (and not a precompile), charge the cold access cost.
-            if (vmState.AccessTracker.IsCold(address) && !address.IsPrecompile(spec) && !address.IsSystemContract(spec))
+            else  if (vmState.AccessTracker.IsCold(address) && !address.IsPrecompile(spec) && !address.IsSystemContract(spec))
             {
                 result = spec.IsEip4762Enabled || UpdateGas(GasCostOf.ColdAccountAccess, ref gasAvailable);
                 vmState.AccessTracker.WarmUp(address);

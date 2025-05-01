@@ -150,7 +150,7 @@ internal static partial class EvmInstructions
 
         // for static call and delegateCall, transferValue is always zero
         // transfer is technically a noOp in case of callCode as the caller = target
-        if (!transferValue.IsZero && TOpCall.ExecutionType == ExecutionType.CALL)
+        if (spec.IsEip4762Enabled && !transferValue.IsZero && TOpCall.ExecutionType == ExecutionType.CALL)
         {
             var gasBefore = gasAvailable;
             if (!vm.EvmState.Env.Witness.AccessForValueTransfer(caller, target, ref gasAvailable))

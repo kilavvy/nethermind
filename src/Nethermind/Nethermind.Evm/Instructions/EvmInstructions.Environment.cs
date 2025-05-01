@@ -349,7 +349,7 @@ internal static partial class EvmInstructions
         if (address is null) goto StackUnderflow;
 
         // Charge gas for account access. If insufficient gas remains, abort.
-        if (!ChargeAccountAccessGas(ref gasAvailable, vm, address)) goto OutOfGas;
+        if (!ChargeAccountAccessGas(ref gasAvailable, vm, address, opCode: Instruction.BALANCE)) goto OutOfGas;
 
         UInt256 result = vm.WorldState.GetBalance(address);
         stack.PushUInt256(in result);

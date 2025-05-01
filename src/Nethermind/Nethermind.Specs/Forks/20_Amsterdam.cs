@@ -14,6 +14,7 @@ public class Amsterdam: Osaka {
     {
         Name = "Amsterdam";
         IsEip4762Enabled = true;
+        IsEip6800Enabled = true;
     }
     public new static IReleaseSpec Instance => LazyInitializer.EnsureInitialized(ref _instance, static () => new Amsterdam());
 }

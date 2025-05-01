@@ -221,9 +221,10 @@ internal static partial class EvmInstructions
             goto None;
         }
 
+
         // If the contract address refers to a dead account, clear its storage before creation.
         // TODO: handle this for verkle trees, no deletion there
-        if (state.IsDeadAccount(contractAddress))
+        if (!spec.IsEip6800Enabled && state.IsDeadAccount(contractAddress))
         {
             state.ClearStorage(contractAddress);
         }
