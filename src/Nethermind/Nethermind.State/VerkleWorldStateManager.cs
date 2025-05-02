@@ -34,7 +34,7 @@ public class VerkleWorldStateManager: IWorldStateManager
         IVerkleTreeStore trieStore,
         IDbProvider dbProvider,
         ILogManager logManager,
-        ILastNStateRootTracker lastNStateRootTracker = null
+        ILastNStateRootTracker? lastNStateRootTracker = null
     )
     {
         _dbProvider = dbProvider;
