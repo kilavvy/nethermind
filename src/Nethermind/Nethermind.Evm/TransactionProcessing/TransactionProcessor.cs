@@ -718,7 +718,7 @@ namespace Nethermind.Evm.TransactionProcessing
                         Logger.Trace($"Destroying account {toBeDestroyed}");
 
                     WorldState.ClearStorage(toBeDestroyed);
-                    WorldState.DeleteAccount(toBeDestroyed);
+                    if (!spec.IsEip6800Enabled) WorldState.DeleteAccount(toBeDestroyed);
 
                     if (tracer.IsTracingRefunds)
                         tracer.ReportRefund(RefundOf.Destroy(spec.IsEip3529Enabled));

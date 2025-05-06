@@ -492,7 +492,7 @@ public sealed unsafe partial class VirtualMachine(
             _worldState.Restore(previousState.Snapshot);
 
             // If the contract creation did not target a pre-existing account, delete the account.
-            if (!previousState.IsCreateOnPreExistingAccount)
+            if (!previousState.IsCreateOnPreExistingAccount && !spec.IsEip6800Enabled)
             {
                 _worldState.DeleteAccount(callCodeOwner);
             }

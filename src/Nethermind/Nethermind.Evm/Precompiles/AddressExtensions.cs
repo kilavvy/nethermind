@@ -49,7 +49,7 @@ public static class AddressExtensions
 
     public static bool IsSystemContract(this Address address, IReleaseSpec releaseSpec)
     {
-        return (address == Eip2935Constants.BlockHashHistoryAddress && releaseSpec.IsEip2935Enabled)
-               || address == Eip4788Constants.BeaconRootsAddress && releaseSpec.IsEip4788Enabled;
+        return (address == releaseSpec.Eip2935ContractAddress && releaseSpec.IsEip2935Enabled)
+               || address == releaseSpec.Eip4788ContractAddress && releaseSpec.IsEip4788Enabled;
     }
 }

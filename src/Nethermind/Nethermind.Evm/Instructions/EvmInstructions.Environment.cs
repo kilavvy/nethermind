@@ -612,6 +612,20 @@ internal static partial class EvmInstructions
 
         // Retrieve the block hash for the given block number.
         // TODO: figure out how to get witness here for state access when eip2935 enabled
+        var blockIndex = new UInt256((ulong)(number % Eip2935Constants.RingBufferSize));
+        Address? eip2935Account = vm.Spec.Eip2935ContractAddress ?? Eip2935Constants.BlockHashHistoryAddress;
+        StorageCell blockHashStoreCell = new(eip2935Account, blockIndex);
+        var gasBefore = gasAvailable;
+        if (!vm.EvmState.Env.Witness.AccessForBlockHashOpCode(blockHashStoreCell.Address,
+                blockHashStoreCell.Index,
+                ref gasAvailable))
+        {
+            return EvmExceptionType.OutOfGas;
+        }
+
+        if (gasBefore == gasAvailable) gasAvailable -= GasCostOf.WarmStateRead;
+        if(gasAvailable < 0) return EvmExceptionType.OutOfGas;
+
         Hash256? blockHash = vm.BlockHashProvider.GetBlockhash(vm.EvmState.Env.TxExecutionContext.BlockExecutionContext.Header, number);
 
         // Push the block hash bytes if available; otherwise, push a 32-byte zero value.

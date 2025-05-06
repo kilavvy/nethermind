@@ -260,6 +260,11 @@ internal static partial class EvmInstructions
             vm.ReturnDataBuffer = default;
             stack.PushBytes(StatusCode.SuccessBytes.Span);
             UpdateGasUp(gasLimitUl, ref gasAvailable);
+            if (!transferValue.IsZero
+                && !vm.EvmState.Env.Witness.AccessCodeHash(target, ref gasAvailable, isWrite: true))
+            {
+                goto OutOfGas;
+            }
             return FastCall(vm, spec, in transferValue, target);
         }
 

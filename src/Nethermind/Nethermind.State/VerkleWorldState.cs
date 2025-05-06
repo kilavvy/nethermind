@@ -703,7 +703,7 @@ public class VerkleWorldState : IWorldState
             if (!(stack.Count > 0 && Changes[stack.Peek()]?.ChangeType == ChangeType.New))
             {
                 throw new StateDeleteNotSupported(
-                    "Account can only be deleted when it was created in the same transaction");
+                    $"Account can only be deleted when it was created in the same transaction {address}");
             }
             _persistentStorageProvider.ClearStorage(address);
         }
