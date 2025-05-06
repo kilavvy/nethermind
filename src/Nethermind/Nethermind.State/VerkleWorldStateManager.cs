@@ -59,7 +59,7 @@ public class VerkleWorldStateManager: IWorldStateManager
         return new WorldStateManager(worldState, trieStore, dbProvider, logManager);
     }
 
-    public IReadOnlyKeyValueStore? HashServer => throw new NotImplementedException();
+    public IReadOnlyKeyValueStore? HashServer => null;
     public IWorldState GlobalWorldState => _worldState;
 
     public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached
@@ -74,7 +74,7 @@ public class VerkleWorldStateManager: IWorldStateManager
 
     public IStateReader GlobalStateReader { get; }
 
-    public ISnapServer? SnapServer =>  throw new NotImplementedException();
+    public ISnapServer? SnapServer =>  null;
 
     public IWorldState CreateResettableWorldState()
     {

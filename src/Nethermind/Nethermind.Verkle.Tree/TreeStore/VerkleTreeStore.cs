@@ -21,7 +21,7 @@ public partial class VerkleTreeStore<TPersistence> : IVerkleTreeStore
     private readonly ILogger _logger;
 
     /// <summary>
-    ///     Mapping to a underlying database that keeps tracks of [StateRoot -> BlockNumber] map
+    ///     Mapping to an underlying database that keeps tracks of [StateRoot -> BlockNumber] map
     /// </summary>
     private readonly StateRootToBlockMap _stateRootToBlocks;
     public ulong GetBlockNumber(Hash256 rootHash) => (ulong)_stateRootToBlocks[rootHash];
