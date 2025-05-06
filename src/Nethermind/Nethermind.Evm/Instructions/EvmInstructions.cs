@@ -456,13 +456,17 @@ internal static unsafe partial class EvmInstructions
         {
             // When tracing access, ensure the storage cell is marked as warm to simulate inclusion in the access list.
             ref readonly StackAccessTracker accessTracker = ref vmState.AccessTracker;
-            if (vm.TxTracer.IsTracingAccess || witnessGasCharged)
+            if (vm.TxTracer.IsTracingAccess)
             {
                 accessTracker.WarmUp(in storageCell);
             }
 
+            if (witnessGasCharged)
+            {
+                accessTracker.WarmUp(in storageCell);
+            }
             // If the storage cell is still cold, apply the higher cold access cost and mark it as warm.
-            if (accessTracker.IsCold(in storageCell))
+            else if (accessTracker.IsCold(in storageCell))
             {
                 // after eip4762 is enabled, we don't charge cold cost as it is replaced by stateless access costs
                 result = spec.IsEip4762Enabled || UpdateGas(GasCostOf.ColdSLoad, ref gasAvailable);
