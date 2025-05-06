@@ -33,7 +33,7 @@ namespace Nethermind.Core
 
         public Withdrawal[]? Withdrawals { get; }
 
-        public ExecutionWitness? ExecutionWitness { get; }
+        public ExecutionWitness? ExecutionWitness { get; set; }
 
         public bool IsEmpty => Transactions.Length == 0 && Uncles.Length == 0 && (Withdrawals?.Length ?? 0) == 0;
     }
