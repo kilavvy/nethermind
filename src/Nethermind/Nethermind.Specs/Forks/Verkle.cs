@@ -18,6 +18,7 @@ public class Verkle: Shanghai
         IsEip2935Enabled = true;
         Eip2935ContractAddress = new("0xfffffffffffffffffffffffffffffffffffffffe");
         IsEip6780Enabled = true;
+        IsEip7709Enabled = true;
     }
     public new static IReleaseSpec Instance => LazyInitializer.EnsureInitialized(ref _instance, static () => new Verkle());
 }
