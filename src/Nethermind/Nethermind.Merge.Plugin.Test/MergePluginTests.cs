@@ -61,14 +61,17 @@ public class MergePluginTests
                 Substitute.For<IProcessExitSource>(),
                 [_consensusPlugin!, _plugin],
                 LimboLogs.Instance))
-            .AddDecorator<INethermindApi>((ctx, api) =>
+            .AddSingleton<IRpcModuleProvider>(Substitute.For<IRpcModuleProvider>())
+            .OnBuild((ctx) =>
             {
+                INethermindApi api = ctx.Resolve<INethermindApi>();
                 Build.MockOutNethermindApi((NethermindApi)api);
 
                 api.BlockProcessingQueue?.IsEmpty.Returns(true);
                 api.DbFactory = new MemDbFactory();
                 api.BlockProducerEnvFactory = new BlockProducerEnvFactory(
                     api.WorldStateManager!,
+                    api.ReadOnlyTxProcessingEnvFactory,
                     api.BlockTree!,
                     api.SpecProvider!,
                     api.BlockValidator!,
@@ -79,8 +82,7 @@ public class MergePluginTests
                     api.TransactionComparerProvider!,
                     ctx.Resolve<IBlocksConfig>(),
                     api.LogManager!);
-
-                return api;
+                api.EngineRequestsTracker = Substitute.For<IEngineRequestsTracker>();
             })
             .Build();
     }
@@ -113,7 +115,6 @@ public class MergePluginTests
         Assert.DoesNotThrowAsync(async () => await _consensusPlugin!.Init(api));
         Assert.DoesNotThrowAsync(async () => await _plugin.Init(api));
         Assert.DoesNotThrowAsync(async () => await _plugin.InitNetworkProtocol());
-        Assert.DoesNotThrowAsync(async () => await _plugin.InitSynchronization());
         Assert.DoesNotThrow(() => _plugin.InitBlockProducer(_consensusPlugin!, null));
         Assert.DoesNotThrowAsync(async () => await _plugin.InitRpcModules());
         Assert.DoesNotThrowAsync(async () => await _plugin.DisposeAsync());
@@ -126,7 +127,6 @@ public class MergePluginTests
         INethermindApi api = container.Resolve<INethermindApi>();
         Assert.DoesNotThrowAsync(async () => await _consensusPlugin!.Init(api));
         await _plugin.Init(api);
-        await _plugin.InitSynchronization();
         await _plugin.InitNetworkProtocol();
         ISyncConfig syncConfig = api.Config<ISyncConfig>();
         Assert.That(syncConfig.NetworkingEnabled, Is.True);
@@ -196,7 +196,7 @@ public class MergePluginTests
 
     [TestCase(true, true, true)]
     [TestCase(true, false, false)]
-    [TestCase(false, true, false)]
+    [TestCase(false, true, true)]
     public async Task InitThrowExceptionIfBodiesAndReceiptIsDisabled(bool downloadBody, bool downloadReceipt, bool shouldPass)
     {
         ISyncConfig syncConfig = new SyncConfig()
@@ -216,6 +216,11 @@ public class MergePluginTests
         else
         {
             await invocation.Should().ThrowAsync<InvalidConfigurationException>();
+        }
+
+        if (!downloadBody && downloadReceipt)
+        {
+            syncConfig.DownloadBodiesInFastSync.Should().BeTrue(); // Modified by PruningTrieStateFactory
         }
     }
 }
