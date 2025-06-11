@@ -281,6 +281,15 @@ namespace Nethermind.State
             throw new NotImplementedException();
         }
 
+        public void SweepLeaves(int blockNumber)
+        {
+        }
+
+        public bool ValuePresentInTree(Hash256 key)
+        {
+            throw new NotImplementedException();
+        }
+
         PreBlockCaches? IPreBlockCaches.Caches => PreBlockCaches;
     }
 }
