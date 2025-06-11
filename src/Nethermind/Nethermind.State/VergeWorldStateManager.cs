@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Threading;
+using Nethermind.Core;
 using Nethermind.Core.Specs;
 using Nethermind.Db;
 using Nethermind.Logging;
+using Nethermind.State.Healing;
+using Nethermind.State.SnapServer;
 using Nethermind.State.Transition;
 using Nethermind.Trie.Pruning;
 using Nethermind.Verkle.Tree.TreeStore;
@@ -82,18 +86,47 @@ public class ReadOnlyVergeWorldStateManager: IWorldStateManager
     }
 
     public virtual IWorldState GlobalWorldState => throw new InvalidOperationException("global world state not supported");
+    public IReadOnlyKeyValueStore? HashServer => null;
 
     public IStateReader GlobalStateReader { get; }
+
+    public ISnapServer? SnapServer =>  null;
 
     public IWorldState CreateResettableWorldState()
     {
         return new VergeWorldStateProvider(_readOnlyMerkleTrieStore, _readOnlyVerkleTrieStore, new StateReader(_readOnlyMerkleTrieStore, _codeDb, _logManager), _specProvider, _readOnlyDbProvider, _logManager);
     }
 
+    public IWorldState CreateWorldStateForWarmingUp(IWorldState forWarmup)
+    {
+        PreBlockCaches? preBlockCaches = (forWarmup as IPreBlockCaches)?.Caches;
+        // TODO: fix this as well to actually use the preBlockCache
+        return CreateResettableWorldState();
+    }
+
+    public IOverridableWorldScope CreateOverridableWorldScope()
+    {
+        throw new NotImplementedException();
+    }
+
+    public IWorldState CreateOverlayWorldState(IReadOnlyDbProvider editableDbProvider)
+    {
+        throw new NotImplementedException();
+    }
+
     public virtual event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached
     {
         add => throw new InvalidOperationException("Unsupported operation");
         remove => throw new InvalidOperationException("Unsupported operation");
+    }
+
+    public void InitializeNetwork(IPathRecovery pathRecovery)
+    {
+    }
+
+    public bool VerifyTrie(BlockHeader stateAtBlock, CancellationToken cancellationToken)
+    {
+        return true;
     }
 
 }
