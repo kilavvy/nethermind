@@ -18,6 +18,7 @@ using Nethermind.Core.Timers;
 using Nethermind.Db;
 using Nethermind.Db.FullPruning;
 using Nethermind.Db.Rocks.Config;
+using Nethermind.JsonRpc.Modules.Admin;
 using Nethermind.Logging;
 using Nethermind.Specs.ChainSpecStyle;
 using Nethermind.State;
@@ -45,7 +46,7 @@ public class PruningTrieStateFactory(
 {
     private readonly ILogger _logger = logManager.GetClassLogger<PruningTrieStateFactory>();
 
-    public (IWorldStateManager, INodeStorage, CompositePruningTrigger) Build()
+    public (IWorldStateManager, INodeStorage, IPruningTrieStateAdminRpcModule) Build()
     {
         CompositePruningTrigger compositePruningTrigger = new CompositePruningTrigger();
 
@@ -198,7 +199,18 @@ public class PruningTrieStateFactory(
             compositePruningTrigger
         );
 
-        return (stateManager, mainNodeStorage, compositePruningTrigger);
+        ManualPruningTrigger pruningTrigger = new();
+        compositePruningTrigger.Add(pruningTrigger);
+        var verifyTrieStarter = new VerifyTrieStarter(stateManager, processExit!, logManager);
+
+        PruningTrieStateAdminRpcModule adminRpcModule = new PruningTrieStateAdminRpcModule(
+            pruningTrigger,
+            blockTree,
+            stateManager.GlobalStateReader,
+            verifyTrieStarter!
+        );
+
+        return (stateManager, mainNodeStorage, adminRpcModule);
     }
 
     private void InitializeFullPruning(
