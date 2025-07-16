@@ -78,6 +78,7 @@ namespace Nethermind.TxPool
         private Hash256? _lastBlockHash;
 
         private bool _isDisposed;
+        private long _pendingTransactionsAdded = 0;
 
         /// <summary>
         /// This class stores all known pending transactions that can be used for block production
@@ -109,6 +110,7 @@ namespace Nethermind.TxPool
             _blobTxStorage = blobTxStorage ?? throw new ArgumentNullException(nameof(blobTxStorage));
             _headInfo = chainHeadInfoProvider ?? throw new ArgumentNullException(nameof(chainHeadInfoProvider));
             _txPoolConfig = txPoolConfig;
+            AcceptTxWhenNotSynced = txPoolConfig.AcceptTxWhenNotSynced;
             _blobReorgsSupportEnabled = txPoolConfig.BlobsSupport.SupportsReorgs();
             _accounts = _accountCache = new AccountCache(_headInfo.ReadOnlyStateProvider);
             _specProvider = _headInfo.SpecProvider;
@@ -342,7 +344,7 @@ namespace Nethermind.TxPool
                         blobTx.SenderAddress ??= _ecdsa.RecoverAddress(blobTx);
                         SubmitTx(blobTx, isEip155Enabled ? TxHandlingOptions.None : TxHandlingOptions.PreEip155Signing);
                     }
-                    if (_logger.IsDebug) _logger.Debug($"Readded txs from reorged block {previousBlock.Number} (hash {previousBlock.Hash}) to blob pool");
+                    if (_logger.IsTrace) _logger.Trace($"Readded txs from reorged block {previousBlock.Number} (hash {previousBlock.Hash}) to blob pool");
 
                     _blobTxStorage.DeleteBlobTransactionsFromBlock(previousBlock.Number);
                 }
@@ -458,13 +460,18 @@ namespace Nethermind.TxPool
 
         public bool AcceptTxWhenNotSynced { get; set; }
         public bool SupportsBlobs { get; }
+        public long PendingTransactionsAdded => Volatile.Read(ref _pendingTransactionsAdded);
 
         public AcceptTxResult SubmitTx(Transaction tx, TxHandlingOptions handlingOptions)
         {
+            bool startBroadcast = _txPoolConfig.PersistentBroadcastEnabled
+                                  && (handlingOptions & TxHandlingOptions.PersistentBroadcast) ==
+                                  TxHandlingOptions.PersistentBroadcast;
+
             if (!AcceptTxWhenNotSynced &&
                 _headInfo.IsSyncing &&
                 // If local tx allow it to be accepted even when syncing
-                (handlingOptions & TxHandlingOptions.PersistentBroadcast) == 0)
+                !startBroadcast)
             {
                 return AcceptTxResult.Syncing;
             }
@@ -476,9 +483,6 @@ namespace Nethermind.TxPool
             tx.PoolIndex = Interlocked.Increment(ref _txIndex);
 
             NewDiscovered?.Invoke(this, new TxEventArgs(tx));
-
-            bool startBroadcast = (handlingOptions & TxHandlingOptions.PersistentBroadcast) ==
-                                  TxHandlingOptions.PersistentBroadcast;
 
             if (_logger.IsTrace)
             {
@@ -611,6 +615,7 @@ namespace Nethermind.TxPool
 
             relevantPool.UpdateGroup(tx.SenderAddress!, state.SenderAccount, _updateBucketAdded);
             Interlocked.Increment(ref Metrics.PendingTransactionsAdded);
+            Interlocked.Increment(ref _pendingTransactionsAdded);
             if (tx.Supports1559) { Metrics.Pending1559TransactionsAdded++; }
             if (tx.SupportsBlobs) { Metrics.PendingBlobTransactionsAdded++; }
 
@@ -691,7 +696,7 @@ namespace Nethermind.TxPool
                 }
                 else
                 {
-                    dropBlobs |= tx.SupportsBlobs && (tx.GetProofVersion() != headSpec.BlobProofVersion || (ulong)tx.BlobVersionedHashes!.Length > headSpec.MaxBlobCount);
+                    dropBlobs |= tx.SupportsBlobs && (tx.GetProofVersion() != headSpec.BlobProofVersion || (ulong)tx.BlobVersionedHashes!.Length > headSpec.MaxBlobsPerTx);
 
                     if (dropBlobs)
                     {
@@ -762,14 +767,14 @@ namespace Nethermind.TxPool
                 {
                     shouldBeDumped = true;
                 }
-                else if (balance < tx.Value)
+                else if (balance < tx.ValueRef)
                 {
                     shouldBeDumped = true;
                 }
                 else if (!tx.Supports1559)
                 {
                     shouldBeDumped = UInt256.MultiplyOverflow(tx.GasPrice, (UInt256)tx.GasLimit, out UInt256 cost);
-                    shouldBeDumped |= UInt256.AddOverflow(cost, tx.Value, out cost);
+                    shouldBeDumped |= UInt256.AddOverflow(in cost, in tx.ValueRef, out cost);
                     shouldBeDumped |= balance < cost;
                 }
 

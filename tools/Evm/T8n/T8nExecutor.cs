@@ -16,12 +16,15 @@ using Nethermind.Core.Test;
 using Nethermind.Crypto;
 using Nethermind.Db;
 using Nethermind.Evm;
+using Nethermind.Evm.State;
 using Nethermind.Evm.Tracing;
-using Nethermind.Evm.Tracing.GethStyle;
+using Nethermind.Blockchain.Tracing.GethStyle;
+using Nethermind.Blockchain.Tracing;
 using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Logging;
 using Nethermind.State;
 using Nethermind.Trie.Pruning;
+using Nethermind.Blockchain;
 
 namespace Evm.T8n;
 
@@ -35,12 +38,9 @@ public static class T8nExecutor
 
         KzgPolynomialCommitments.InitializeAsync();
 
-        IDb stateDb = new MemDb();
-        IDb codeDb = new MemDb();
-
-        TrieStore trieStore = TestTrieStoreFactory.Build(stateDb, _logManager);
-        WorldState stateProvider = new(trieStore, codeDb, _logManager);
-        CodeInfoRepository codeInfoRepository = new();
+        IWorldStateManager worldStateManager = TestWorldStateFactory.CreateForTest();
+        IWorldState stateProvider = worldStateManager.GlobalWorldState;
+        EthereumCodeInfoRepository codeInfoRepository = new();
         IBlockhashProvider blockhashProvider = ConstructBlockHashProvider(test);
 
         IVirtualMachine virtualMachine = new VirtualMachine(
@@ -76,11 +76,11 @@ public static class T8nExecutor
         blockReceiptsTracer.SetOtherTracer(compositeBlockTracer);
         blockReceiptsTracer.StartNewBlockTrace(block);
 
-        var blkCtx = new BlockExecutionContext(block.Header, test.Spec);
+        virtualMachine.SetBlockExecutionContext(new BlockExecutionContext(block.Header, test.Spec));
         BeaconBlockRootHandler beaconBlockRootHandler = new(transactionProcessor, stateProvider);
         if (test.ParentBeaconBlockRoot is not null)
         {
-            beaconBlockRootHandler.StoreBeaconRoot(block, in blkCtx, test.Spec, storageTxTracer);
+            beaconBlockRootHandler.StoreBeaconRoot(block, test.Spec, storageTxTracer);
         }
 
         int txIndex = 0;
@@ -103,7 +103,7 @@ public static class T8nExecutor
 
             blockReceiptsTracer.StartNewTxTrace(transaction);
             TransactionResult transactionResult = transactionProcessor
-                .Execute(transaction, in blkCtx, blockReceiptsTracer);
+                .Execute(transaction, blockReceiptsTracer);
             blockReceiptsTracer.EndTxTrace();
 
             transactionExecutionReport.ValidTransactions.Add(transaction);
@@ -150,7 +150,7 @@ public static class T8nExecutor
         return t8NBlockHashProvider;
     }
 
-    private static void ApplyRewards(Block block, WorldState stateProvider, IReleaseSpec spec, ISpecProvider specProvider)
+    private static void ApplyRewards(Block block, IWorldState stateProvider, IReleaseSpec spec, ISpecProvider specProvider)
     {
         var rewardCalculator = new RewardCalculator(specProvider);
         BlockReward[] rewards = rewardCalculator.CalculateRewards(block);
