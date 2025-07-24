@@ -34,6 +34,7 @@ using Nethermind.TxPool;
 using NSubstitute;
 using NUnit.Framework;
 using System;
+using Nethermind.Core.Test.Db;
 using Nethermind.State;
 
 namespace Nethermind.JsonRpc.Test.Modules
@@ -66,9 +67,7 @@ namespace Nethermind.JsonRpc.Test.Modules
             peerManager.ConnectedPeers.Returns(new List<Peer> { peerA, peerB, peerA, peerC, peerB });
             peerManager.MaxActivePeers.Returns(15);
 
-            IDbProvider dbProvider = TestMemDbProvider.Init();
-            WorldStateManager worldStateManager = TestWorldStateFactory.CreateForTest(dbProvider, LimboLogs.Instance);
-            IWorldState stateProvider = worldStateManager.GlobalWorldState;
+            TestReadOnlyStateProvider stateProvider = new TestReadOnlyStateProvider();
 
             _blockTree = Build.A.BlockTree()
                 .WithoutSettingHead
