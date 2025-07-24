@@ -267,6 +267,38 @@ jobs:
               "${L2_METRICS_FLAGS[@]}" \
               $extra_param
 
+          elif [[ "$network" == surge-* ]]; then
+            if [[ "$network" == *hoodi* ]]; then
+              CONSENSUS_URL="${{ secrets.HOODI_CONSENSUS_URL }}"
+              EXECUTION_URL="${{ secrets.HOODI_EXECUTION_URL }}"
+              stripped_network="hoodi"
+              surge_client_version="surge-testnet"
+            else
+              echo "Unknown network"
+              exit 1
+            fi
+
+            mkdir -p execution-data-surge/logs/configs
+            mv ../tests/predefined_configs/customNLog.config execution-data-surge/logs/configs/customNLog.config
+
+            ./build/sedge generate \
+              --logging none \
+              -p $GITHUB_WORKSPACE/sedge \
+              surge-full-node \
+              --l2-execution nethermind:$docker_image \
+              --surge-image nethsurge/taiko-client:surge-testnet:$surge_client_version \
+              --map-all \
+              --network $stripped_network \
+              --consensus-url $CONSENSUS_URL \
+              --execution-api-url $EXECUTION_URL \
+              --el-l2-extra-flag Sync.NonValidatorNode=true \
+              --el-l2-extra-flag Sync.DownloadBodiesInFastSync=false \
+              --el-l2-extra-flag Sync.DownloadReceiptsInFastSync=false \
+              --el-l2-extra-flag loggerConfigSource=/nethermind/data/logs/configs/customNLog.config \
+              --el-l2-extra-flag Sync.VerifyTrieOnStateSyncFinished=true \
+              "${L2_METRICS_FLAGS[@]}" \
+              $extra_param
+
           else
             mkdir -p execution-data/logs/configs
             mv ../tests/predefined_configs/customNLog.config execution-data/logs/configs/customNLog.config
