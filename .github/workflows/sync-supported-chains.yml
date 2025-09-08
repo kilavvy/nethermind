@@ -242,16 +242,16 @@ jobs:
               CONSENSUS_URL="${{ secrets.MAINNET_CONSENSUS_URL }}"
               EXECUTION_URL="${{ secrets.MAINNET_EXECUTION_URL }}"
               stripped_network="mainnet"
-              taiko_client_version="taiko-alethia-client-v0.43.2"
             elif [[ "$network" == *hekla* ]]; then
               CONSENSUS_URL="${{ secrets.HOLESKY_CONSENSUS_URL }}"
               EXECUTION_URL="${{ secrets.HOLESKY_EXECUTION_URL }}"
               stripped_network="holesky"
-              taiko_client_version="latest"
             else
               echo "Unknown network"
               exit 1
             fi
+
+            taiko_client_version="latest"
 
             mkdir -p execution-data-taiko/logs/configs
             mv ../tests/predefined_configs/customNLog.config execution-data-taiko/logs/configs/customNLog.config
