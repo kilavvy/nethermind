@@ -665,9 +665,6 @@ namespace Nethermind.Evm.TransactionProcessing
             }
             else
             {
-                if (Environment.GetEnvironmentVariable("BLOCK_NUMBER") == "19")
-                    Debug.WriteLine("Hello Stylus Contract");
-
                 if (tx.IsContractCreation)
                 {
                     if (tx.IsLegacyContractCreation)
@@ -723,11 +720,10 @@ namespace Nethermind.Evm.TransactionProcessing
                 return false;
             }
 
-            // TODO: Make optinal to support Stylus
-            /*if (CodeDepositHandler.CodeIsInvalid(spec, substate.Output.Bytes, 0))
+            if (CodeDepositHandler.CodeIsInvalid(spec, substate.Output.Bytes, 0))
             {
                 return false;
-            }*/
+            }
 
             if (unspentGas >= codeDepositGasCost)
             {
