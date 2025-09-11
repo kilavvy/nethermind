@@ -114,11 +114,15 @@ public sealed class BlockchainProcessor : IBlockchainProcessor, IBlockProcessing
 
     private void OnNewHeadBlock(object? sender, BlockEventArgs e)
     {
+        Console.WriteLine($"## BLOCKCHAIN - Event(OnNewHeadBlock): num={e.Block.Number} curr={e.Block.Hash}");
+
         _lastProcessedBlock = DateTime.UtcNow;
     }
 
     private void OnNewBestBlock(object sender, BlockEventArgs blockEventArgs)
     {
+        Console.WriteLine($"## BLOCKCHAIN - Event(OnNewBestBlock): num={blockEventArgs.Block.Number} curr={blockEventArgs.Block.Hash}");
+
         ProcessingOptions options = ProcessingOptions.None;
         if (_options.StoreReceiptsByDefault)
         {
