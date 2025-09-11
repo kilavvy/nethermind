@@ -156,10 +156,14 @@ public sealed class BlockchainProcessor : IBlockchainProcessor, IBlockProcessing
                     if (_logger.IsTrace) _logger.Trace($"A new block {block.ToString(Block.Format.Short)} enqueued for processing.");
                     if (_queueCount > 1)
                     {
+                        Console.WriteLine($"## BLOCKCHAIN - RECOVERY Q WRITE: num={block.Number} curr={block.Hash}");
+
                         _recoveryQueue.Writer.TryWrite(blockRef);
                     }
                     else
                     {
+                        Console.WriteLine($"## BLOCKCHAIN - BLOCK Q WRITE: num={block.Number} curr={block.Hash}");
+
                         // Skip recovery queue if nothing in queue
                         if (!_blockQueue.Writer.TryWrite(blockRef))
                         {
@@ -263,6 +267,8 @@ public sealed class BlockchainProcessor : IBlockchainProcessor, IBlockProcessing
         _lastProcessedBlock = DateTime.UtcNow;
         await foreach (BlockRef blockRef in _recoveryQueue.Reader.ReadAllAsync(CancellationToken))
         {
+            Console.WriteLine($"## BLOCKCHAIN-RLOOP - RECOVERY Q READ: num={blockRef.Block.Number} curr={blockRef.Block.Hash}");
+
             try
             {
                 Interlocked.Add(ref _currentRecoveryQueueSize, -blockRef.Block!.Transactions.Length);
@@ -271,6 +277,8 @@ public sealed class BlockchainProcessor : IBlockchainProcessor, IBlockProcessing
 
                 try
                 {
+                    Console.WriteLine($"## BLOCKCHAIN-RLOOP - BLOCK Q WRITE: num={blockRef.Block.Number} curr={blockRef.Block.Hash}");
+
                     await _blockQueue.Writer.WriteAsync(blockRef);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
@@ -359,6 +367,8 @@ public sealed class BlockchainProcessor : IBlockchainProcessor, IBlockProcessing
         {
             try
             {
+                Console.WriteLine($"## BLOCKCHAIN-PLOOP - BLOCK Q READ: num={blockRef.Block?.Number} curr={blockRef.Block?.Hash}");
+
                 if (blockRef.IsInDb || blockRef.Block is null)
                 {
                     ThrowIncorrectBlockReference(blockRef);
