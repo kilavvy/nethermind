@@ -17,6 +17,7 @@ using Nethermind.Db;
 using Nethermind.Db.Blooms;
 using Nethermind.Facade.Find;
 using Nethermind.History;
+using Nethermind.Logging;
 using Nethermind.State.Repositories;
 using Nethermind.TxPool;
 
@@ -43,6 +44,7 @@ public class BlockTreeModule(IReceiptConfig receiptConfig) : Autofac.Module
             .AddSingleton<IBlockTree, BlockTree>()
             .Bind<IBlockFinder, IBlockTree>()
             .AddSingleton<ILogFinder, LogFinder>()
+            .AddSingleton<ILogIndexStorage, LogIndexStorage>()
             .AddSingleton<IReadOnlyBlockTree, IBlockTree>((bt) => bt.AsReadOnly())
 
             ;
