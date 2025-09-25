@@ -187,7 +187,7 @@ public sealed class LogIndexService : ILogIndexService
         _stats[isForward] = new(_logIndexStorage);
 
         if (_logger.IsInfo) // TODO: log at debug/trace
-            _logger.Info($"{GetLogPrefix(isForward)}: {stats:d}");
+            _logger.Info($"{GetLogPrefix(isForward)}: {stats}");
     }
 
     private void LogProgress()
