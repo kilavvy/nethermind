@@ -49,7 +49,7 @@ public interface ILogIndexConfig : IConfig
 
     [ConfigItem(
         Description = "Log index sync: degree of parallelism for fetching receipts.",
-        DefaultValue = "16",
+        DefaultValue = "Max(ProcessorCount / 2, 1)",
         HiddenFromDocs = true
     )]
     public int SyncFetchBatchParallelism { get; set; }
@@ -81,4 +81,18 @@ public interface ILogIndexConfig : IConfig
         HiddenFromDocs = true
     )]
     public int CompactionDistance { get; set; }
+
+    [ConfigItem(
+        Description = "Log index sync: compression algorithm to use for block numbers.",
+        DefaultValue = nameof(TurboPFor.p4nd1enc256v32) + " if supported, otherwise " + nameof(TurboPFor.p4nd1enc128v32),
+        HiddenFromDocs = true
+    )]
+    string? CompressionAlgorithm { get; set; }
+
+    [ConfigItem(
+        Description = "Log index sync: whether to show detailed stats in progress logs.",
+        DefaultValue = "false",
+        HiddenFromDocs = true
+    )]
+    bool DetailedLogs { get; set; }
 }

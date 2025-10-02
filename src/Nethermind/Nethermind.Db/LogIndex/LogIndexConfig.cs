@@ -18,10 +18,14 @@ public class LogIndexConfig : ILogIndexConfig
     public int SyncAggregateBatchQueueSize { get; set; } = 16;
     public int SyncSaveBatchQueueSize { get; set; } = 16;
 
-    public int SyncFetchBatchParallelism { get; set; } = 16;
+    public int SyncFetchBatchParallelism { get; set; } = Math.Max(Environment.ProcessorCount / 2, 1);
     public int SyncAggregateParallelism { get; set; } = Math.Max(Environment.ProcessorCount / 2, 1);
     public int CompressionParallelism { get; set; } = Math.Max(Environment.ProcessorCount / 2, 1);
 
     public int CompressionDistance { get; set; } = 128;
     public int CompactionDistance { get; set; } = 262_144;
+
+    public string? CompressionAlgorithm { get; set; } = LogIndexStorage.CompressionAlgorithm.Best.Key;
+
+    public bool DetailedLogs { get; set; } = false;
 }

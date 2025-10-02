@@ -195,7 +195,12 @@ public sealed class LogIndexService : ILogIndexService
         _stats[isForward] = new(_logIndexStorage);
 
         if (_logger.IsInfo) // TODO: log at debug/trace
-            _logger.Info($"{GetLogPrefix(isForward)}: {stats}");
+        {
+            _logger.Info(_config.DetailedLogs
+                    ? $"{GetLogPrefix(isForward)}: {stats:d}"
+                    : $"{GetLogPrefix(isForward)}: {stats}"
+            );
+        }
     }
 
     private void LogProgress()
@@ -449,7 +454,7 @@ public sealed class LogIndexService : ILogIndexService
             progress.MarkEnd();
 
         if (_logger.IsInfo)
-            _logger.Info($"{GetLogPrefix(isForward: false)}: completed.");
+            _logger.Info($"{GetLogPrefix(isForward)}: completed.");
     }
 
     private static int? GetNextBlockNumber(ILogIndexStorage storage, bool isForward)
