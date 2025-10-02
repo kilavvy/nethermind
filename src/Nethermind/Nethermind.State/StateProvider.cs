@@ -524,6 +524,7 @@ namespace Nethermind.State
                 {
                     FlushToTree();
                 }
+
                 return;
             }
 
