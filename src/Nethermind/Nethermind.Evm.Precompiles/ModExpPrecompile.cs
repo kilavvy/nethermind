@@ -33,6 +33,7 @@ public class ModExpPrecompile : IPrecompile<ModExpPrecompile>
     private const int StartExpLength = 32;
     private const int StartModLength = 64;
     private const int LengthsLengths = StartModLength + LengthSize;
+    private const bool IsModexpRepricingEnabled = true;
 
     private ModExpPrecompile()
     {
@@ -95,30 +96,23 @@ public class ModExpPrecompile : IPrecompile<ModExpPrecompile>
             return long.MaxValue;
         }
 
-        ulong complexity = MultComplexity(baseLength, modulusLength, releaseSpec.IsEip7883Enabled);
+        ulong complexity = MultComplexity(baseLength, modulusLength, IsModexpRepricingEnabled);
 
         uint expLengthUpTo32 = Math.Min(LengthSize, expLength);
         uint startIndex = LengthsLengths + baseLength; //+ expLength - expLengthUpTo32; // Geth takes head here, why?
         UInt256 exp = new(inputData.SliceWithZeroPaddingEmptyOnError((int)startIndex, (int)expLengthUpTo32), isBigEndian: true);
-        UInt256 iterationCount = CalculateIterationCount(expLength, exp, releaseSpec.IsEip7883Enabled);
+        UInt256 iterationCount = CalculateIterationCount(expLength, exp, IsModexpRepricingEnabled);
 
         bool overflow = UInt256.MultiplyOverflow(complexity, iterationCount, out UInt256 result);
 
-        if (!releaseSpec.IsEip7883Enabled)
-        {
-            result /= 3;
-        }
-
         return result > long.MaxValue || overflow
             ? long.MaxValue
-            : Math.Max(releaseSpec.IsEip7883Enabled ? GasCostOf.MinModExpEip7883 : GasCostOf.MinModExpEip2565, (long)result);
+            : Math.Max(IsModexpRepricingEnabled ? GasCostOf.MinModExpEip7883 : GasCostOf.MinModExpEip2565, (long)result);
     }
 
     private static bool ExceedsMaxInputSize(IReleaseSpec releaseSpec, uint baseLength, uint expLength, uint modulusLength)
     {
-        return releaseSpec.IsEip7823Enabled
-            ? (baseLength > ModExpMaxInputSizeEip7823 | expLength > ModExpMaxInputSizeEip7823 | modulusLength > ModExpMaxInputSizeEip7823)
-            : (baseLength | modulusLength) > int.MaxValue;
+        return baseLength > ModExpMaxInputSizeEip7823 | expLength > ModExpMaxInputSizeEip7823 | modulusLength > ModExpMaxInputSizeEip7823;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -294,7 +288,7 @@ public class ModExpPrecompile : IPrecompile<ModExpPrecompile>
     /// <returns></returns>
     private static ulong MultComplexity(uint baseLength, uint modulusLength, bool isEip7883Enabled)
     {
-        // Pick the larger of the two  
+        // Pick the larger of the two
         uint max = baseLength > modulusLength ? baseLength : modulusLength;
 
         // Compute ceil(max/8) via a single add + shift
