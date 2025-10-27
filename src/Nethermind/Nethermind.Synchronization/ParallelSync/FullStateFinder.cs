@@ -17,6 +17,7 @@ public class FullStateFinder : IFullStateFinder
     private const int MaxLookupBack = 128;
     private readonly IStateReader _stateReader;
     private readonly IBlockTree _blockTree;
+    private long _lastKnownState = 0;
 
     public FullStateFinder(
         IBlockTree blockTree,
@@ -63,6 +64,11 @@ public class FullStateFinder : IFullStateFinder
             {
                 bestFullState = Math.Max(bestFullState, SearchForFullState(bestSuggested));
             }
+        }
+
+        if (bestFullState != 0)
+        {
+            _lastKnownState = bestFullState;
         }
 
         return bestFullState;
