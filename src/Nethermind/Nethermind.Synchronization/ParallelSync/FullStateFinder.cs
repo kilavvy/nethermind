@@ -71,7 +71,13 @@ public class FullStateFinder : IFullStateFinder
     private long SearchForFullState(BlockHeader startHeader)
     {
         long bestFullState = 0;
-        for (int i = 0; i < MaxLookupBack; i++)
+        long maxLookupBack = MaxLookupBack;
+        if (_lastKnownState != 0)
+        {
+            maxLookupBack = long.Max(maxLookupBack, startHeader.Number - _lastKnownState + 1);
+        }
+
+        for (int i = 0; i < maxLookupBack; i++)
         {
             if (startHeader is null)
             {
