@@ -39,8 +39,8 @@ internal static unsafe partial class EvmInstructions
         lookup[(int)Instruction.SDIV] = &InstructionMath2Param<OpSDiv, TTracingInst>;
         lookup[(int)Instruction.MOD] = &InstructionMath2Param<OpMod, TTracingInst>;
         lookup[(int)Instruction.SMOD] = &InstructionMath2Param<OpSMod, TTracingInst>;
-        lookup[(int)Instruction.ADDMOD] = &InstructionMath3Param<OpAddMod, TTracingInst>;
-        lookup[(int)Instruction.MULMOD] = &InstructionMath3Param<OpMulMod, TTracingInst>;
+        lookup[(int)Instruction.ADDMOD] = &InstructionMath3Param2<OpAddMod2, TTracingInst>;
+        lookup[(int)Instruction.MULMOD] = &InstructionMath3Param2<OpMulMod2, TTracingInst>;
         lookup[(int)Instruction.EXP] = &InstructionExp<TTracingInst>;
         lookup[(int)Instruction.SIGNEXTEND] = &InstructionSignExtend<TTracingInst>;
 
