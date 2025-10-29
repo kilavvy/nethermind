@@ -27,6 +27,8 @@ RUN dotnet tool install -g dotnet-dump && \
   dotnet tool install -g dotnet-trace && \
   dotnet tool install -g JetBrains.dotTrace.GlobalTools
 
+RUN ln -sr /publish/nethermind /publish/Nethermind.Runner
+
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-noble
 
 WORKDIR /nethermind
