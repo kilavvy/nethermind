@@ -27,8 +27,6 @@ RUN dotnet tool install -g dotnet-dump && \
   dotnet tool install -g dotnet-trace && \
   dotnet tool install -g JetBrains.dotTrace.GlobalTools
 
-RUN ln -sr /publish/nethermind /publish/Nethermind.Runner
-
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-noble
 
 WORKDIR /nethermind
@@ -44,6 +42,12 @@ COPY --from=build /publish .
 COPY --from=build /root/.dotnet/tools /opt/diag-tools
 COPY --from=build /tmp/jetbrains.dotmemory.console.*/**/tools /opt/diag-tools/dotmemory
 
+# A temporary symlink to support the old executable name
+RUN ln -s nethermind Nethermind.Runner
+
 ENV PATH="$PATH:/opt/diag-tools:/opt/diag-tools/dotmemory"
 
-ENTRYPOINT ["./nethermind"]
+# Entrypoint script that supports both nethermind and Nethermind.Runner
+RUN printf '#!/bin/sh\nif [ "$1" = "/nethermind/Nethermind.Runner" ] || [ "$1" = "./Nethermind.Runner" ] || [ "$1" = "Nethermind.Runner" ]; then\n  shift\n  exec ./Nethermind.Runner "$@"\nelse\n  exec ./nethermind "$@"\nfi\n' > /nethermind/entrypoint.sh && chmod +x /nethermind/entrypoint.sh
+
+ENTRYPOINT ["/nethermind/entrypoint.sh"]
