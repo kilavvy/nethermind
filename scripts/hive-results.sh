@@ -4,53 +4,61 @@
 
 set -euo pipefail
 
-knownFailingTests=$(cat nethermind/scripts/known-failing-hive-tests.txt)
-# in some test suits this test is a client setup and in some it's a master test. So just ignore it
-launchTestName='client launch (nethermind)'
+known_fails=$(cat ./nethermind/scripts/known-failing-hive-tests.txt)
+# In some test suites this test is a client setup and in some it's a master test.
+# So just ignore it.
+launch_test='client launch (nethermind)'
 
-shouldNotPass=()
-shouldPass=()
+should_not_pass=()
+should_pass=()
 
-for passed in "true" "false"
-do
-  tmp=()
-  mapfile tmp < <(jq '.testCases | map_values(select(.summaryResult.pass == $p)) | map(.name) | .[]' --argjson p "$passed" -r $1)
-  IFS=$'\n' results=($(sort -f <<<"${tmp[*]}")); unset IFS
+for passed in "true" "false"; do
+  mapfile -t results < <(
+    jq -r '.testCases
+            | map_values(select(.summaryResult.pass == $p))
+            | map(.name)
+            | .[]' \
+       --argjson p "$passed" -- "$1" \
+    | sort -f
+  )
 
-  if ($passed == "true")
-  then
+  if [[ "$passed" == "true" ]]; then
     echo -e "\nPassed: ${#results[@]}\n"
 
-    for each in "${results[@]}";
-    do
+    for each in "${results[@]}"; do
       echo -e "\033[0;32m\u2714\033[0m $each"
-      if grep -qx "$each" <<< "$knownFailingTests" && [ "$each" != "$launchTestName" ]; then
-        shouldNotPass+=("$each")
+
+      if grep -Fqx "$each" <<< "$known_fails" && [[ "$each" != "$launch_test" ]]; then
+        should_not_pass+=("$each")
       fi
     done
   else
     echo -e "\nFailed: ${#results[@]}\n"
 
-    for each in "${results[@]}";
-    do
+    for each in "${results[@]}"; do
       echo -e "\033[0;31m\u2716\033[0m $each"
-      if ! grep -qx "$each" <<< "$knownFailingTests" && [ "$each" != "$launchTestName" ]; then
-        shouldPass+=("$each")
+
+      if ! grep -Fqx "$each" <<< "$known_fails" && [[ "$each" != "$launch_test" ]]; then
+        should_pass+=("$each")
       fi
     done
   fi
 done
 
-if [ ${#shouldPass[@]} -gt 0 ]; then
-  echo -e "\nTests expected to pass but failed ${#shouldPass[@]}\n"
-  for each in "${shouldPass[@]}"; do echo -e "$each"; done
+if [[ ${#should_pass[@]} -gt 0 ]]; then
+  echo -e "\nTests expected to pass but failed: ${#should_pass[@]}\n"
+
+  for each in "${should_pass[@]}"; do
+    echo -e "$each";
+  done
 fi
 
-if [ ${#shouldNotPass[@]} -gt 0 ]; then
-  echo -e "\nTests expected to fail but passed ${#shouldNotPass[@]}\n"
-  for each in "${shouldNotPass[@]}"; do echo -e "$each"; done
+if [[ ${#should_not_pass[@]} -gt 0 ]]; then
+  echo -e "\nTests expected to fail but passed: ${#should_not_pass[@]}\n"
+
+  for each in "${should_not_pass[@]}"; do
+    echo -e "$each";
+  done
 fi
 
-if [[ ${#shouldNotPass[@]} -gt 0 || ${#shouldPass[@]} -gt 0 ]]; then
-  exit 1
-fi
+(( ${#should_not_pass[@]} + ${#should_pass[@]} > 0 )) && exit 1
