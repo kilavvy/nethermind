@@ -21,7 +21,7 @@ for passed in "true" "false"; do
   IFS=$'\n' results=($(sort -f <<<"${tmp[*]}")); unset IFS
 
   if [[ "$passed" == "true" ]]; then
-    echo -e "\nPassed: ${#results[@]}\n"
+    echo -e "\nPassed ${#results[@]}:\n\n"
 
     for each in "${results[@]}"; do
       echo -e "\033[0;32m\u2714\033[0m $each"
@@ -31,7 +31,7 @@ for passed in "true" "false"; do
       fi
     done
   else
-    echo -e "\nFailed: ${#results[@]}\n"
+    echo -e "\n\nFailed ${#results[@]}:\n\n"
 
     for each in "${results[@]}"; do
       if ! grep -Fqx "$each" <<< "$known_fails" && [[ "$each" != "$launch_test" ]]; then
