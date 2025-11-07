@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2023 Demerzel Solutions Limited
 # SPDX-License-Identifier: LGPL-3.0-only
 
+set -euo pipefail
+
 knownFailingTests=$(cat nethermind/scripts/known-failing-hive-tests.txt)
 # in some test suits this test is a client setup and in some it's a master test. So just ignore it
 launchTestName='client launch (nethermind)'
