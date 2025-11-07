@@ -36,7 +36,7 @@ for passed in "true" "false"; do
     for each in "${results[@]}"; do
       if ! grep -Fqx "$each" <<< "$known_fails" && [[ "$each" != "$launch_test" ]]; then
         should_pass+=("$each")
-        echo -e "\033[0;31m\u2716 $each\033[0m"
+        echo -e "\033[0;31m\u2716\033[0m $each"
       else
         echo -e "\033[90m\u2716 $each\033[0m"
       fi
