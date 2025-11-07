@@ -44,4 +44,4 @@ for passed in "true" "false"; do
   fi
 done
 
-[[ ${#should_pass[@]} -gt 0 || ${#should_not_pass[@]} -gt 0 ]] && exit 1
+if [[ ${#should_pass[@]} -gt 0 || ${#should_not_pass[@]} -gt 0 ]]; then exit 1; fi
