@@ -39,7 +39,7 @@ for passed in "true" "false"; do
         should_pass+=("$each")
         echo -e "\033[0;31m\u2716\033[0m $each"
       else
-        echo "$each"
+        echo -e "\u2716 $each"
       fi
     done
   fi
