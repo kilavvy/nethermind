@@ -13,14 +13,13 @@ should_not_pass=()
 should_pass=()
 
 for passed in "true" "false"; do
-  mapfile -t results < <(
-    jq -r '.testCases
-            | map_values(select(.summaryResult.pass == $p))
-            | map(.name)
-            | .[]' \
-       --argjson p "$passed" -- "$1" \
-    | sort -f
-  )
+  tmp=()
+  mapfile tmp < <(jq '.testCases
+    | map_values(select(.summaryResult.pass == $p))
+    | map(.name)
+    | .[]' \
+    --argjson p "$passed" -r $1)
+  IFS=$'\n' results=($(sort -f <<<"${tmp[*]}")); unset IFS
 
   if [[ "$passed" == "true" ]]; then
     echo -e "\nPassed: ${#results[@]}\n"
