@@ -45,7 +45,7 @@ for passed in "true" "false"; do
 done
 
 if [[ ${#should_pass[@]} -gt 0 ]]; then
-  echo -e "\nTests expected to pass but failed: ${#should_pass[@]}\n"
+  echo -e "\n\033[0;31mTests expected to pass but failed: ${#should_pass[@]}\033[0m\n"
 
   for each in "${should_pass[@]}"; do
     echo -e "$each";
@@ -53,7 +53,7 @@ if [[ ${#should_pass[@]} -gt 0 ]]; then
 fi
 
 if [[ ${#should_not_pass[@]} -gt 0 ]]; then
-  echo -e "\nTests expected to fail but passed: ${#should_not_pass[@]}\n"
+  echo -e "\n\033[0;32mTests expected to fail but passed: ${#should_not_pass[@]}\033[0m\n"
 
   for each in "${should_not_pass[@]}"; do
     echo -e "$each";
