@@ -24,7 +24,7 @@ for passed in "true" "false"; do
     echo -e "\nPassed ${#results[@]}:\n"
 
     for each in "${results[@]}"; do
-      echo -e "\033[0;32m\u2714\033[0m $each"
+      echo -e "\033[32m\u2714\033[0m $each"
 
       if grep -Fqx "$each" <<< "$known_fails" && [[ "$each" != "$launch_test" ]]; then
         should_not_pass+=("$each")
@@ -36,7 +36,7 @@ for passed in "true" "false"; do
     for each in "${results[@]}"; do
       if ! grep -Fqx "$each" <<< "$known_fails" && [[ "$each" != "$launch_test" ]]; then
         should_pass+=("$each")
-        echo -e "\033[0;31m\u2716\033[0m $each"
+        echo -e "\033[31m\u2716\033[0m $each"
       else
         echo -e "\033[90m\u2716 $each\033[0m"
       fi
