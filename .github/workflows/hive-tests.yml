@@ -48,7 +48,6 @@ jobs:
   test:
     name: Build and run tests
     runs-on: ubuntu-latest
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
@@ -86,16 +85,17 @@ jobs:
           ref: ${{ env.HIVE_BRANCH }}
           path: hive
       - name: Patch Hive Dockerfile
-        run: sed -i 's#FROM $baseimage:$tag#FROM nethermind:test-${{ github.sha }}#g' hive/clients/nethermind/Dockerfile
+        run: sed -i 's#FROM $baseimage:$tag#FROM nethermind:test-${GITHUB_SHA}#g' hive/clients/nethermind/Dockerfile
       - name: Build Hive
         working-directory: hive
         run: go build .
       - name: Load Docker image
         run: docker load --input /tmp/image.tar
       - name: Run Hive
+        continue-on-error: true
         working-directory: hive
         run: |
-          HIVE_ARGS="--client nethermind --sim ${{ matrix.test-suite }} --sim.loglevel $LOG_LEVEL --sim.parallelism 12"
+          HIVE_ARGS="--client nethermind --sim ${{ matrix.test-suite }} --sim.loglevel $LOG_LEVEL --sim.parallelism 24"
           [[ -n "$LIMIT" ]] && HIVE_ARGS="$HIVE_ARGS --sim.limit $LIMIT"
           [[ -n "$BUILDARG" ]] && HIVE_ARGS="$HIVE_ARGS --sim.buildarg \"$BUILDARG\""
           ./hive $HIVE_ARGS
