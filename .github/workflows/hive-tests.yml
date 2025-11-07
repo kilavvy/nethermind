@@ -10,7 +10,7 @@ on:
         description: Test suite
         type: choice
         options:
-          - ''
+          - ""
           - devp2p
           - ethereum/consensus
           - ethereum/eest
@@ -26,9 +26,9 @@ on:
       log-level:
         description: Log level
         required: true
-        default: '3'
+        default: "3"
         type: choice
-        options: ['0', '1', '2', '3', '4', '5']
+        options: ["0", "1", "2", "3", "4", "5"]
       hive-repo:
         description: Hive repo
         required: true
@@ -107,5 +107,5 @@ jobs:
           retention-days: 7
       - name: Print results
         run: |
-          rm hive/workspace/logs/hive.json
+          rm -f hive/workspace/logs/hive.json
           nethermind/scripts/hive-results.sh "hive/workspace/logs/*.json"
