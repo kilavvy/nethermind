@@ -8,9 +8,8 @@ known_fails=$(cat ./nethermind/scripts/known-failing-hive-tests.txt)
 # In some test suites this test is a client setup and in some it's a master test.
 # So just ignore it.
 launch_test='client launch (nethermind)'
-
-should_not_pass=()
 should_pass=()
+should_not_pass=()
 
 for passed in "true" "false"; do
   tmp=()
@@ -37,7 +36,7 @@ for passed in "true" "false"; do
     for each in "${results[@]}"; do
       if ! grep -Fqx "$each" <<< "$known_fails" && [[ "$each" != "$launch_test" ]]; then
         should_pass+=("$each")
-        echo -e "\033[0;31m\u2716\033[0m $each"
+        echo -e "\033[0;31m\u2716 $each\033[0m"
       else
         echo -e "\u2716 $each"
       fi
