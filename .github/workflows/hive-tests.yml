@@ -93,13 +93,12 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/image.tar
       - name: Run Hive
-        continue-on-error: true
         working-directory: hive
         run: |
           HIVE_ARGS="--client nethermind --sim ${{ matrix.test-suite }} --sim.loglevel $LOG_LEVEL --sim.parallelism 12"
           [[ -n "$LIMIT" ]] && HIVE_ARGS="$HIVE_ARGS --sim.limit $LIMIT"
           [[ -n "$BUILDARG" ]] && HIVE_ARGS="$HIVE_ARGS --sim.buildarg \"$BUILDARG\""
-          exec ./hive $HIVE_ARGS
+          ./hive $HIVE_ARGS
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
@@ -109,4 +108,4 @@ jobs:
       - name: Print results
         run: |
           rm -f hive/workspace/logs/hive.json
-          exec nethermind/scripts/hive-results.sh "hive/workspace/logs/*.json"
+          nethermind/scripts/hive-results.sh "hive/workspace/logs/*.json"
