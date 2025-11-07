@@ -95,7 +95,7 @@ jobs:
         continue-on-error: true
         working-directory: hive
         run: |
-          HIVE_ARGS="--client nethermind --sim ${{ matrix.test-suite }} --sim.loglevel $LOG_LEVEL --sim.parallelism 16"
+          HIVE_ARGS="--client nethermind --sim ${{ matrix.test-suite }} --sim.loglevel $LOG_LEVEL --sim.parallelism 12"
           [[ -n "$LIMIT" ]] && HIVE_ARGS="$HIVE_ARGS --sim.limit $LIMIT"
           [[ -n "$BUILDARG" ]] && HIVE_ARGS="$HIVE_ARGS --sim.buildarg \"$BUILDARG\""
           ./hive $HIVE_ARGS
