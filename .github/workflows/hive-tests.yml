@@ -3,7 +3,7 @@ name: Hive tests
 on:
   push:
     tags: ["*"]
-    branches: [master, fix/hive-tests]
+    branches: [master]
   workflow_dispatch:
     inputs:
       test-suite:
@@ -48,6 +48,7 @@ jobs:
   test:
     name: Build and run tests
     runs-on: ubuntu-latest
+    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
@@ -108,4 +109,4 @@ jobs:
       - name: Print results
         run: |
           rm -f hive/workspace/logs/hive.json
-          nethermind/scripts/hive-results.sh "hive/workspace/logs/*.json"
+          exec nethermind/scripts/hive-results.sh "hive/workspace/logs/*.json"
